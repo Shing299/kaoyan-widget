@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="#F3EEFF">
+    <TextView
+        android:id="@+id/w_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#5B3FA8"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="考研单词" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="3dp"
+        android:orientation="vertical">
+        <TextView android:id="@+id/w1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:textColor="#2B2B2B" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" android:gravity="center_vertical" android:text="等待推送…" />
+        <TextView android:id="@+id/w2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:textColor="#2B2B2B" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" android:gravity="center_vertical" />
+        <TextView android:id="@+id/w3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:textColor="#2B2B2B" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" android:gravity="center_vertical" />
+        <TextView android:id="@+id/w4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:textColor="#2B2B2B" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" android:gravity="center_vertical" />
+        <TextView android:id="@+id/w5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:textColor="#2B2B2B" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" android:gravity="center_vertical" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/w_foot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#8A8A8A"
+        android:textSize="11sp"
+        android:maxLines="1"
+        android:layout_marginTop="4dp"
+        android:text="点击查看今日全部" />
+</LinearLayout>

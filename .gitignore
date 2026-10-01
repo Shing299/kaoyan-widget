@@ -1,0 +1,33 @@
+# ---- build output ----
+out/
+build/
+*.apk
+*.ap_
+*.dex
+*.class
+
+# ---- python ----
+__pycache__/
+*.pyc
+
+# ---- signing keys & secrets: NEVER commit ----
+*.jks
+*.keystore
+*.p12
+*.bks
+keystore.properties
+secrets.properties
+.env
+.env.*
+
+# ---- local runtime / user data ----
+state.json
+history.jsonl
+files/
+*.log
+words_custom.txt
+
+# ---- editor / OS ----
+.idea/
+*.iml
+.DS_Store
