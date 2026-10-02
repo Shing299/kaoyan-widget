@@ -26,6 +26,17 @@ public class MainActivity extends Activity {
         // 启动前台服务并确保调度
         try { startForegroundService(new Intent(this, BotService.class)); } catch (Exception e) { }
         try { Scheduler.schedule(this); } catch (Exception e) { }
+        // 首次安装后申请通知权限 + 引导自启动 / 电池优化
+        try { Perms.firstRun(this); } catch (Exception e) { }
+    }
+
+    /** 通知权限申请结果：无论允许与否，随后弹出后台运行 / 自启动引导。 */
+    @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        super.onRequestPermissionsResult(req, perms, res);
+        if (req == Perms.REQ_NOTIF) {
+            try { Perms.showGuide(this); } catch (Exception e) { }
+        }
     }
 
     void load() {
