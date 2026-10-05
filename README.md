@@ -9,6 +9,17 @@
 
 ---
 
+## 📦 下载
+
+最新版本见 [Releases](https://github.com/shing299/kaoyan-widget/releases)：
+
+- **v1.1.1**：[kaoyan-widget-v1.1.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.1.1/kaoyan-widget-v1.1.1.apk)
+
+```bash
+# 安装 / 覆盖升级
+pm install -r -d kaoyan-widget-v1.1.1.apk
+```
+
 ## 📸 截图
 
 | 权限引导（首次启动） | 主界面 · 今日单词 | 菜单 |
