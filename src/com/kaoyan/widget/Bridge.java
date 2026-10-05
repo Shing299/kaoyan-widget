@@ -18,6 +18,7 @@ public class Bridge {
     @JavascriptInterface public void pickWords() { a.runOnUiThread(new PickTask(a)); }
     @JavascriptInterface public void resetWords() { a.runOnUiThread(new ResetTask(a)); }
     @JavascriptInterface public void openSetup() { a.runOnUiThread(new SetupTask(a)); }
+    @JavascriptInterface public void setPushTime(String s, String e) { a.runOnUiThread(new PushTimeTask(a, s, e)); }
 
     static void doPush(Context ctx) {
         try {
@@ -87,5 +88,26 @@ public class Bridge {
         Activity a;
         SetupTask(Activity a) { this.a = a; }
         public void run() { HtmlView.FORCE_SETUP = true; ((MainActivity) a).load(); }
+    }
+
+    /** 保存每日推送时段，并按新时段重排今天剩余批次。 */
+    static void doSetPushTime(Context ctx, String s, String e) {
+        try {
+            JSONObject st = Store.loadState(ctx);
+            Engine.ensureState(st);
+            int sm = Engine.parseHM(s, Engine.DEF_START_MIN);
+            int em = Engine.parseHM(e, Engine.DEF_END_MIN);
+            if (em <= sm) em = sm + 60;
+            st.put("push_start", Engine.fmtHM(sm));
+            st.put("push_end", Engine.fmtHM(em));
+            Store.saveState(ctx, st);
+            Scheduler.schedule(ctx);
+        } catch (Throwable t) { }
+    }
+
+    static class PushTimeTask implements Runnable {
+        Activity a; String s, e;
+        PushTimeTask(Activity a, String s, String e) { this.a = a; this.s = s; this.e = e; }
+        public void run() { doSetPushTime(a, s, e); ((MainActivity) a).load(); }
     }
 }

@@ -63,12 +63,15 @@ public class Scheduler {
             if (batches <= 0) { setRoll(c); return 0; }
 
             Calendar cal = Calendar.getInstance();
+            int sMin = Engine.pushStartMin(st);
+            int eMin = Engine.pushEndMin(st);
+            if (eMin <= sMin) eMin = sMin + 60;
             Calendar end = (Calendar) cal.clone();
-            end.set(Calendar.HOUR_OF_DAY, Engine.END_HOUR);
-            end.set(Calendar.MINUTE, 0); end.set(Calendar.SECOND, 0); end.set(Calendar.MILLISECOND, 0);
+            end.set(Calendar.HOUR_OF_DAY, eMin / 60);
+            end.set(Calendar.MINUTE, eMin % 60); end.set(Calendar.SECOND, 0); end.set(Calendar.MILLISECOND, 0);
             Calendar start = (Calendar) cal.clone();
-            start.set(Calendar.HOUR_OF_DAY, Engine.START_HOUR);
-            start.set(Calendar.MINUTE, 0); start.set(Calendar.SECOND, 0); start.set(Calendar.MILLISECOND, 0);
+            start.set(Calendar.HOUR_OF_DAY, sMin / 60);
+            start.set(Calendar.MINUTE, sMin % 60); start.set(Calendar.SECOND, 0); start.set(Calendar.MILLISECOND, 0);
 
             long winStart = Math.max(now, start.getTimeInMillis());
             long endMs = end.getTimeInMillis();
@@ -90,11 +93,16 @@ public class Scheduler {
     }
 
     static void setRoll(Context c) {
-        Calendar t = Calendar.getInstance();
-        t.set(Calendar.HOUR_OF_DAY, Engine.START_HOUR);
-        t.set(Calendar.MINUTE, 0); t.set(Calendar.SECOND, 0); t.set(Calendar.MILLISECOND, 0);
-        long at = t.getTimeInMillis();
-        if (at <= System.currentTimeMillis()) at += 86400000L;
-        setAlarm(c, at, RC_ROLL, ACTION_ROLL);
+        try {
+            JSONObject st = Store.loadState(c);
+            int sMin = Engine.pushStartMin(st);
+            Calendar t = Calendar.getInstance();
+            t.set(Calendar.HOUR_OF_DAY, sMin / 60);
+            t.set(Calendar.MINUTE, sMin % 60);
+            t.set(Calendar.SECOND, 0); t.set(Calendar.MILLISECOND, 0);
+            long at = t.getTimeInMillis();
+            if (at <= System.currentTimeMillis()) at += 86400000L;
+            setAlarm(c, at, RC_ROLL, ACTION_ROLL);
+        } catch (Exception e) { }
     }
 }

@@ -9,6 +9,8 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private boolean showingSetup = false;
+    private boolean examSet = false;
     static final int REQ_WORDS = 1001;
 
     @Override
@@ -41,9 +43,22 @@ public class MainActivity extends Activity {
 
     void load() {
         try {
+            examSet = Store.loadState(this).optString("exam", "").length() >= 10;
             String html = HtmlView.build(this);
+            showingSetup = HtmlView.FORCE_SETUP || !examSet;
             web.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
+            web.clearHistory();
+            web.scrollTo(0, 0);
         } catch (Exception e) { }
+    }
+
+    /** 从通知/小组件再次进入时复用同一实例，刷新到最新推送。 */
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        HtmlView.FORCE_SETUP = false;
+        load();
     }
 
     /** 打开系统文件选择器，导入自定义词库。 */
@@ -81,8 +96,10 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (web != null && web.canGoBack()) {
-            web.goBack();
+        // 在设置页按返回 -> 退回主页；主页按返回 -> 直接回桌面，不再翻 WebView 旧历史
+        if (showingSetup && examSet) {
+            HtmlView.FORCE_SETUP = false;
+            load();
         } else {
             super.onBackPressed();
         }

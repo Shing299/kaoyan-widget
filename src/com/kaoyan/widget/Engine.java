@@ -28,6 +28,42 @@ public class Engine {
     public static String today() { return DAY.format(new Date()); }
     public static String nowTs() { return TS.format(new Date()); }
 
+    // 每日推送时段默认值（可被 state 里的 push_start / push_end 覆盖）
+    public static final int DEF_START_MIN = 8 * 60;
+    public static final int DEF_END_MIN = 22 * 60;
+
+    /** 解析 "HH:mm" 为当天分钟数；非法则返回 def。 */
+    public static int parseHM(String s, int def) {
+        if (s == null) return def;
+        s = s.trim();
+        int c = s.indexOf(':');
+        if (c <= 0) return def;
+        try {
+            int h = Integer.parseInt(s.substring(0, c).trim());
+            int m = Integer.parseInt(s.substring(c + 1).trim());
+            if (h < 0 || h > 23 || m < 0 || m > 59) return def;
+            return h * 60 + m;
+        } catch (Exception e) { return def; }
+    }
+
+    /** 当天分钟数 -> "HH:mm"。 */
+    public static String fmtHM(int minutes) {
+        if (minutes < 0) minutes = 0;
+        if (minutes > 23 * 60 + 59) minutes = 23 * 60 + 59;
+        int h = minutes / 60, m = minutes % 60;
+        return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+    }
+
+    /** 推送开始时间（分钟）。 */
+    public static int pushStartMin(JSONObject st) {
+        return parseHM(st.optString("push_start", ""), DEF_START_MIN);
+    }
+
+    /** 推送结束时间（分钟）。 */
+    public static int pushEndMin(JSONObject st) {
+        return parseHM(st.optString("push_end", ""), DEF_END_MIN);
+    }
+
     static long daysBetween(String a, String b) {
         try {
             Date da = DAY.parse(a), db = DAY.parse(b);
@@ -77,6 +113,8 @@ public class Engine {
             if (!st.has("plan")) st.put("plan", new JSONArray());
             if (!st.has("plan_pos")) st.put("plan_pos", 0);
             if (!st.has("plan_day_no")) st.put("plan_day_no", 0);
+            if (!st.has("push_start")) st.put("push_start", fmtHM(DEF_START_MIN));
+            if (!st.has("push_end")) st.put("push_end", fmtHM(DEF_END_MIN));
         } catch (Exception e) { }
         return st;
     }

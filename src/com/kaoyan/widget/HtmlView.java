@@ -52,6 +52,7 @@ public class HtmlView {
         int per = Engine.dailyNew(st, wc, today);
         int rev = Engine.reviewCap(st, per);
         int dl = Engine.daysLeft(st, today);
+        String win = Engine.fmtHM(Engine.pushStartMin(st)) + "–" + Engine.fmtHM(Engine.pushEndMin(st));
 
         StringBuilder h = new StringBuilder();
         h.append("<!doctype html><html><head><meta charset='utf-8'>");
@@ -88,7 +89,7 @@ public class HtmlView {
         h.append("<a class='mi' onclick='App.reload()'>🔄 刷新数据</a>");
         h.append("<a class='mi' onclick='App.openSetup()'>⚙️ 设置 / 换词库</a>");
         h.append("<a class='mi' onclick='goTop()'>⬆️ 回到顶部</a>");
-        h.append("<div class='drawer-foot'>推送 08:00–22:00<br>初试 ").append(esc(exam)).append("（剩 ").append(dl).append(" 天）<br>每日新学 ").append(per).append(" · 复习 ≤ ").append(rev).append("</div></nav>");
+        h.append("<div class='drawer-foot'>推送 ").append(win).append("<br>初试 ").append(esc(exam)).append("（剩 ").append(dl).append(" 天）<br>每日新学 ").append(per).append(" · 复习 ≤ ").append(rev).append("</div></nav>");
         h.append("<script>");
         h.append("function toggleMenu(o){var d=document.getElementById('drawer'),s=document.getElementById('scrim');if(o===undefined)o=!d.classList.contains('open');if(o){d.classList.add('open');s.classList.add('open');}else{d.classList.remove('open');s.classList.remove('open');}}");
         h.append("function goTop(){window.scrollTo(0,0);toggleMenu(false);}");
@@ -130,6 +131,10 @@ public class HtmlView {
 
     /** 首次设置页：初试日期 + 词库管理。 */
     static String setupPage(Context ctx, String exam, String today) {
+        JSONObject pst = Store.loadState(ctx);
+        Engine.ensureState(pst);
+        String pstart = Engine.fmtHM(Engine.pushStartMin(pst));
+        String pend = Engine.fmtHM(Engine.pushEndMin(pst));
         int wc = Words.load(ctx).size();
         String src = Words.sourceName(ctx);
         String val = (exam != null && exam.length() >= 10) ? exam.substring(0, 10) : "2027-12-20";
@@ -148,6 +153,8 @@ public class HtmlView {
         h.append(".ct{font-size:15px;font-weight:700;margin-bottom:8px}");
         h.append(".wc{font-size:13px;color:#6a5f8c;margin-bottom:14px;line-height:1.5}");
         h.append(".btn2{width:100%;border:1px solid #d8ccf2;border-radius:10px;background:#fff;color:#5b4a92;font-size:15px;padding:12px;margin-top:10px;cursor:pointer}");
+        h.append("input[type=time]{width:100%;box-sizing:border-box;font-size:17px;padding:12px;border:1px solid #e3dbf5;border-radius:12px;background:#fff;color:#2b2340}");
+        h.append(".row{display:flex;gap:10px;align-items:center}");
         h.append("</style></head><body>");
         h.append("<h1>欢迎使用 · 考研单词</h1>");
         h.append("<p class='sub'>首次使用请设置初试日期，系统会按剩余天数和词库总量，自动推算每日需要新学的单词数量。</p>");
@@ -159,6 +166,11 @@ public class HtmlView {
         h.append("<div class='wc'>当前 <b>").append(wc).append("</b> 词（").append(src).append("）<br>默认内置考研词表，可导入自己的 txt 覆盖。</div>");
         h.append("<button class='btn2' onclick='App.pickWords()'>📂 导入自定义词库（txt）</button>");
         h.append("<button class='btn2' onclick='App.resetWords()'>↩️ 恢复内置考研词库</button></div>");
+        h.append("<div class='card'><div class='ct'>每日推送时段</div>");
+        h.append("<div class='wc'>单词会在该时段内分批推送（每批 ").append(Engine.WORDS_PER_PUSH).append(" 个）。默认 08:00–22:00。</div>");
+        h.append("<div class='row'><input id='pstart' type='time' value='").append(pstart).append("'>");
+        h.append("<span>—</span><input id='pend' type='time' value='").append(pend).append("'></div>");
+        h.append("<button class='btn2' onclick='savePush()'>保存推送时间</button></div>");
         h.append("<script>");
         h.append("var WC=").append(wc).append(";");
         h.append("function calc(){var ex=document.getElementById('exam');var v=ex.value;var c=document.getElementById('calc');");
@@ -169,6 +181,7 @@ public class HtmlView {
         h.append("c.innerText='距离初试 '+days+' 天｜每日约需新学 '+per+' 个单词（约 '+Math.ceil(per/5)+' 批/天）';}");
         h.append("var ex=document.getElementById('exam');ex.addEventListener('input',calc);ex.addEventListener('change',calc);");
         h.append("function saveExam(){var v=ex.value;if(!v){return;}App.setExam(v);}");
+        h.append("function savePush(){var s=document.getElementById('pstart').value;var e=document.getElementById('pend').value;if(!s||!e){return;}if(e<=s){alert('结束时间需晚于开始时间');return;}App.setPushTime(s,e);alert('已保存推送时段：'+s+' – '+e);}");
         h.append("calc();");
         h.append("</script>");
         h.append("</body></html>");

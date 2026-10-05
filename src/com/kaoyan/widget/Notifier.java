@@ -58,10 +58,16 @@ public class Notifier {
  
     public static Notification buildService(Context ctx) {
         ensureChannel(ctx);
+        String win = "08:00–22:00";
+        try {
+            JSONObject st = Store.loadState(ctx);
+            Engine.ensureState(st);
+            win = Engine.fmtHM(Engine.pushStartMin(st)) + "–" + Engine.fmtHM(Engine.pushEndMin(st));
+        } catch (Exception e) { }
         return new Notification.Builder(ctx, CH)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("考研单词推送运行中")
-            .setContentText("08:00–22:00 随机推送 · 点击查看今日单词")
+            .setContentText(win + " 随机推送 · 点击查看今日单词")
             .setContentIntent(openIntent(ctx))
             .setOngoing(true)
             .build();
