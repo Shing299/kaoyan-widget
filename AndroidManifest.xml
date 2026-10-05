@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kaoyan.widget"
-    android:versionCode="4"
-    android:versionName="1.2">
+    android:versionCode="5"
+    android:versionName="1.3">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
@@ -38,12 +38,11 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+        <!-- 唯一的前台服务：定时推送（dataSync）+ 学习弹幕（specialUse） -->
         <service android:name=".BotService" android:exported="false"
-            android:foregroundServiceType="dataSync"/>
-        <service android:name=".DanmakuService" android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="dataSync|specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="word_danmaku_overlay"/>
+                android:value="word_push_and_danmaku"/>
         </service>
     </application>
 </manifest>

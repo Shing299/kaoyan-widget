@@ -215,22 +215,32 @@ public class Engine {
         }
     }
 
-    /** 推送下一批（最多 WORDS_PER_PUSH 个）。返回 true 表示已推送。 */
-    public static boolean pushNext(Context ctx, List<Words.W> words, JSONObject st) {
+    /** 弹幕用的单行文本（与通知同一批词、同样的顺序，但不带序号与 [新]/[复] 标签）。 */
+    public static String danmakuText(Words.W w) {
+        return w.word + (w.ph.length() > 0 ? " [" + w.ph + "]" : "") + "  " + w.mean;
+    }
+
+    /**
+     * 推送下一批（最多 WORDS_PER_PUSH 个）。
+     * 返回这一批词的**弹幕文本**（没有可推送的返回 null），
+     * 供调用方交给 {@link BotService#showBatch} 再以弹幕走一遍。
+     */
+    public static String[] pushNext(Context ctx, List<Words.W> words, JSONObject st) {
         try {
             JSONArray plan = st.getJSONArray("plan");
             int pos = st.getInt("plan_pos");
-            if (pos >= plan.length()) return false;
+            if (pos >= plan.length()) return null;
             int end = Math.min(pos + WORDS_PER_PUSH, plan.length());
             JSONArray batch = new JSONArray();
             for (int i = pos; i < end; i++) batch.put(plan.get(i));
-            pushBatch(ctx, words, batch, st);
-            return true;
-        } catch (Exception e) { return false; }
+            return pushBatch(ctx, words, batch, st);
+        } catch (Exception e) { return null; }
     }
 
-    public static void pushBatch(Context ctx, List<Words.W> words, JSONArray items, JSONObject st) {
+    /** 推送一批；返回这一批词的弹幕文本（供弹幕复用）。 */
+    public static String[] pushBatch(Context ctx, List<Words.W> words, JSONArray items, JSONObject st) {
         try {
+            String[] dm = new String[items.length()];
             StringBuilder content = new StringBuilder();
             JSONArray lines = new JSONArray();
             int newCnt = 0, revCnt = 0;
@@ -242,6 +252,7 @@ public class Engine {
                 if (i > 0) content.append("\n");
                 content.append(ln);
                 lines.put(ln);
+                dm[i] = danmakuText(words.get(idx));
                 if (kind == 0) newCnt++; else revCnt++;
             }
 
@@ -267,6 +278,7 @@ public class Engine {
 
             Notifier.dismissRecall(ctx);
             WidgetProvider.updateWidget(ctx, title, words, items);
-        } catch (Exception e) { }
+            return dm;
+        } catch (Exception e) { return null; }
     }
 }

@@ -25,8 +25,8 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(this), "App");
         setContentView(web);
         load();
-        // 启动前台服务并确保调度
-        try { startForegroundService(new Intent(this, BotService.class)); } catch (Exception e) { }
+        // 启动唯一的前台服务（推送调度 + 学习弹幕）并确保调度
+        BotService.sync(this);
         try { Scheduler.schedule(this); } catch (Exception e) { }
         // 首次安装后申请通知权限 + 引导自启动 / 电池优化
         try { Perms.firstRun(this); } catch (Exception e) { }
@@ -92,16 +92,11 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         load();
-        syncDanmaku();
+        syncService();
     }
 
-    /** 根据开关与悬浮窗权限同步学习弹幕服务。 */
-    void syncDanmaku() {
-        try {
-            DanmakuService.sync(this,
-                "1".equals(Store.loadState(this).optString("danmaku_on", "0")));
-        } catch (Exception e) { }
-    }
+    /** 确保前台服务在跑（推送调度与弹幕都由它负责）。 */
+    void syncService() { BotService.sync(this); }
 
     /** 系统深浅色切换时即时刷新界面。 */
     @Override

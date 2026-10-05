@@ -34,7 +34,8 @@ public class Bridge {
                 Engine.buildPlan(st, ws.size(), today);
                 Store.saveState(ctx, st);
             }
-            Engine.pushNext(ctx, ws, st);
+            String[] dm = Engine.pushNext(ctx, ws, st);
+            if (dm != null && dm.length > 0) BotService.showBatch(ctx, dm);
         } catch (Throwable e) { }
     }
 
@@ -128,7 +129,9 @@ public class Bridge {
             boolean on = !"1".equals(st.optString("danmaku_on", "0"));
             st.put("danmaku_on", on ? "1" : "0");
             Store.saveState(ctx, st);
-            DanmakuService.sync(ctx, on);
+            // 服务始终在跑（推送调度需要它），开关只决定弹幕画不画；
+            // sync 会顺带刷新常驻通知文案，并让弹幕层尽快重读设置
+            BotService.sync(ctx);
         } catch (Throwable t) { }
     }
 
@@ -145,7 +148,7 @@ public class Bridge {
             st.put("danmaku_font", ("serif".equals(font) || "mono".equals(font)) ? font : "sans");
             st.put("danmaku_bold", "0".equals(bold) ? "0" : "1");
             Store.saveState(ctx, st);
-            if ("1".equals(st.optString("danmaku_on", "0"))) DanmakuService.sync(ctx, true);
+            BotService.sync(ctx);
         } catch (Throwable t) { }
     }
 

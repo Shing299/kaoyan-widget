@@ -12,8 +12,9 @@ public class BootReceiver extends BroadcastReceiver {
             if (android.os.Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(s);
             else ctx.startService(s);
         } catch (Exception e) { }
+        // 开机恢复：BotService 同时负责推送调度与学习弹幕，
+        // 弹幕开关由它自己每 tick 读 state 决定，这里不用再单独拉弹幕服务
         Scheduler.schedule(ctx);
-        // 开机后如果弹幕是开着的，也一并恢复（syncFromState 会自行检查开关与悬浮窗权限）
-        try { DanmakuService.syncFromState(ctx); } catch (Exception e) { }
+        try { BotService.sync(ctx); } catch (Exception e) { }
     }
 }

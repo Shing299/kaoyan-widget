@@ -26,18 +26,20 @@ public class BatchReceiver extends BroadcastReceiver {
                     Engine.buildPlan(st, words.size(), today);
                     Store.saveState(ctx, st);
                 }
-                Engine.pushNext(ctx, words, st);
+                // 一次推送、两种呈现：同一批词既进通知，也交给弹幕划过
+                String[] dm = Engine.pushNext(ctx, words, st);
+                if (dm != null && dm.length > 0) BotService.showBatch(ctx, dm);
                 beat(ctx);
             }
         } catch (Throwable e) { android.util.Log.e("KAOYAN","ERR "+e); e.printStackTrace(); }
     }
 
     /**
-     * 弹幕心跳：每天每批推送闹钟都会走到这里。
-     * 若弹幕开着但服务已被系统冻结/停掉，这一步会把它重新拉起来
+     * 心跳：每天每批推送闹钟都会走到这里。
+     * 服务（推送调度 + 弹幕）被系统冻结/停掉后，这一步会把它重新拉起来
      * （原来只能等用户重新打开 App，弹幕会一直静默）。
      */
     static void beat(Context ctx) {
-        try { DanmakuService.syncFromState(ctx); } catch (Throwable t) { }
+        try { BotService.sync(ctx); } catch (Throwable t) { }
     }
 }

@@ -56,30 +56,24 @@ public class Notifier {
         } catch (Exception e) { }
     }
  
+    /**
+     * 唯一的常驻通知（推送调度与学习弹幕共用一个前台服务）。
+     * 一行里同时交代「推送时段」和「弹幕开关」，不再挂两条通知。
+     */
     public static Notification buildService(Context ctx) {
         ensureChannel(ctx);
         String win = "08:00–22:00";
+        boolean dm = false;
         try {
             JSONObject st = Store.loadState(ctx);
             Engine.ensureState(st);
             win = Engine.fmtHM(Engine.pushStartMin(st)) + "–" + Engine.fmtHM(Engine.pushEndMin(st));
+            dm = "1".equals(st.optString("danmaku_on", "0"));
         } catch (Exception e) { }
         return new Notification.Builder(ctx, CH)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("考研单词推送运行中")
-            .setContentText(win + " 随机推送 · 点击查看今日单词")
-            .setContentIntent(openIntent(ctx))
-            .setOngoing(true)
-            .build();
-    }
-
-    /** 学习弹幕前台服务通知。 */
-    public static Notification buildDanmaku(Context ctx) {
-        ensureChannel(ctx);
-        return new Notification.Builder(ctx, CH)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("学习弹幕已开启")
-            .setContentText("使用手机时划过单词 · 熄屏不弹")
+            .setContentTitle("考研单词 · 运行中")
+            .setContentText(win + " 分批推送｜学习弹幕" + (dm ? "已开启" : "已关闭"))
             .setContentIntent(openIntent(ctx))
             .setOngoing(true)
             .build();
