@@ -40,10 +40,13 @@ public class DanmakuService extends Service {
     static final int NOTI_ID = 1002;
     public static final String ACTION_STOP = "com.kaoyan.widget.DANMAKU_STOP";
 
-    /** 同时在飞的弹幕上限；超出时移除最早的一条。 */
-    static final int MAX_LIVE = 8;
-    /** 纵向最多分几条「泳道」，同屏弹幕各占一条，避免互相压住。 */
-    static final int MAX_LANES = 8;
+    /** 同时在飞的弹幕上限（防御性兜底；正常由泳道数天然限制）。 */
+    static final int MAX_LIVE = 12;
+    /**
+     * 纵向最多分几条「泳道」。同屏弹幕**一条一泳道**，绝不共用。
+     * 取 12 是为了让设置里的上限「2 个/秒」也能铺开：2 个/秒 × 约 4.2s 行程 ≈ 8.4 条并发。
+     */
+    static final int MAX_LANES = 12;
     /** 两次弹出之间的最小间隔（毫秒）：设置里的上限 2 个/秒 需要 500ms。 */
     static final long MIN_GAP_MS = 300L;
     /** 划过速度：每像素耗时（毫秒）——数值越大越慢。 */
@@ -223,7 +226,10 @@ public class DanmakuService extends Service {
         int textH = (fm.descent - fm.ascent) + padV * 2;
 
         int laneTotal = laneCount(sh, textH);
-        int lane = pickLane(laneTotal);
+        int lane = freeLane(laneTotal);
+        // 没有空泳道就放弃这一条：宁可少弹，也不要两条叠在同一行
+        //（叠字会造成「单词频闪」，比少弹难看得多）
+        if (lane < 0) return;
 
         int flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
@@ -235,7 +241,8 @@ public class DanmakuService extends Service {
         lp.gravity = Gravity.TOP | Gravity.START;
         lp.y = laneY(lane, sh, textH, laneTotal);
 
-        // 先腾位置再上新：超过上限时移除最早的一条
+        // 防御性兜底：泳道数已经天然限制了并发，正常不会走到这里。
+        // 注意不要「新的一条来了就把还在半路的一条删掉」——那正是「刚动一点就飞走」的老毛病。
         while (live.size() >= MAX_LIVE) removeView(live.get(0));
         try {
             wm.addView(tv, lp);
@@ -266,13 +273,17 @@ public class DanmakuService extends Service {
         return y;
     }
 
-    /** 挑一条当前没被占用的泳道；全都占用了就随机挑一条。 */
-    private int pickLane(int laneTotal) {
+    /**
+     * 挑一条当前**没被占用**的泳道；一条空位都没有时返回 -1。
+     * 绝不复用已占用的泳道：两条同泳道弹幕同速平移，文字会一直叠在一起，
+     * 视觉上就是「单词频闪」。
+     */
+    private int freeLane(int laneTotal) {
         ArrayList<Integer> free = new ArrayList<Integer>();
         for (int i = 0; i < laneTotal; i++) {
             if (!lanes.contains(Integer.valueOf(i))) free.add(Integer.valueOf(i));
         }
-        if (free.isEmpty()) return rnd.nextInt(laneTotal);
+        if (free.isEmpty()) return -1;
         return free.get(rnd.nextInt(free.size())).intValue();
     }
 
