@@ -21,14 +21,17 @@ import android.widget.TextView;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Random;
 
 /**
- * 学习弹幕：在「推送时段」内、屏幕点亮且正在使用手机时，
- * 不时从屏幕上划过一条「单词 + 释义」悬浮弹幕；熄屏时不弹出。
+ * 学习弹幕：屏幕点亮且正在使用手机时，不时从屏幕上划过一条
+ * 「单词 + 释义」悬浮弹幕；熄屏时不弹出。
  * 需要「悬浮窗」权限（SYSTEM_ALERT_WINDOW）。
+ *
+ * 注意：弹幕**不受「推送时段」限制**（开关打开即全天生效）。
+ * 推送时段只管通知批次；早期版本用推送时段去闸弹幕，
+ * 结果用户设好频率、时段一过却什么都不弹，且界面上毫无提示。
  *
  * v1.2 修复：多条弹幕可以同时存在、各自飞完自己移除
  * （旧实现只有一条，新弹幕一来就把上一条删掉，看起来像「刚动一点就飞走」）。
@@ -125,7 +128,8 @@ public class DanmakuService extends Service {
         if (!running) return;
         try {
             screenOn = isInteractive();
-            if (isOn() && inWindow() && currentRate() > 0) showOne();
+            // 只看「开关 + 亮屏/熄屏频率」，不再用推送时段卡弹幕
+            if (isOn() && currentRate() > 0) showOne();
         } catch (Throwable t) {
         } finally {
             scheduleNext(0L);
@@ -165,17 +169,6 @@ public class DanmakuService extends Service {
     private boolean isOn() {
         try { return "1".equals(Store.loadState(this).optString("danmaku_on", "0")); }
         catch (Exception e) { return false; }
-    }
-
-    private boolean inWindow() {
-        try {
-            JSONObject st = Store.loadState(this);
-            Engine.ensureState(st);
-            Calendar c = Calendar.getInstance();
-            int now = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE);
-            int s = Engine.pushStartMin(st), e = Engine.pushEndMin(st);
-            return now >= s && now <= e;
-        } catch (Exception e) { return false; }
     }
 
     private boolean isInteractive() {
@@ -287,16 +280,21 @@ public class DanmakuService extends Service {
         return free.get(rnd.nextInt(free.size())).intValue();
     }
 
-    /** 移除单个弹幕（并同步清掉它的泳道占用）。 */
+    /**
+     * 移除单个弹幕（并同步清掉它的泳道占用）。
+     * 顺序要紧：**先**从 WindowManager 摘掉窗口，**再**把泳道标记为空闲。
+     * 反过来的话会有一瞬间「泳道显示空闲、旧窗口还没消失」，
+     * 新弹幕正好挑中这条泳道就出现同泳道叠字。
+     */
     private void removeView(View v) {
         if (v == null) return;
+        try { v.animate().cancel(); } catch (Throwable t) { }
+        if (wm != null) { try { wm.removeView(v); } catch (Exception e) { } }
         int i = live.indexOf(v);
         if (i >= 0) {
             live.remove(i);
             if (i < lanes.size()) lanes.remove(i);
         }
-        try { v.animate().cancel(); } catch (Throwable t) { }
-        if (wm != null) { try { wm.removeView(v); } catch (Exception e) { } }
     }
 
     /** 清空全部弹幕（熄屏 / 服务销毁）。 */

@@ -41,13 +41,19 @@ public class Bridge {
     static void doSetExam(Context ctx, String d) {
         try {
             if (d != null && d.length() >= 10) {
+                String nd = d.substring(0, 10);
                 JSONObject st = Store.loadState(ctx);
                 Engine.ensureState(st);
-                st.put("exam", d.substring(0, 10));
-                // 按新词量重排今日计划
-                st.put("plan", new JSONArray());
-                st.put("plan_pos", 0);
-                st.put("day", JSONObject.NULL);
+                String old = st.optString("exam", "");
+                st.put("exam", nd);
+                // 只有初试日期**真的变了**才重排今日计划。
+                // 原来无条件把 plan / plan_pos 清零，导致在设置页点一下
+                // 「保存并开始」（哪怕日期没动）就会把当天进度打回重来。
+                if (!nd.equals(old)) {
+                    st.put("plan", new JSONArray());
+                    st.put("plan_pos", 0);
+                    st.put("day", JSONObject.NULL);
+                }
                 Store.saveState(ctx, st);
             }
             HtmlView.FORCE_SETUP = false;

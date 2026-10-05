@@ -76,16 +76,10 @@ public class Notifier {
     /** 学习弹幕前台服务通知。 */
     public static Notification buildDanmaku(Context ctx) {
         ensureChannel(ctx);
-        String win = "08:00–22:00";
-        try {
-            JSONObject st = Store.loadState(ctx);
-            Engine.ensureState(st);
-            win = Engine.fmtHM(Engine.pushStartMin(st)) + "–" + Engine.fmtHM(Engine.pushEndMin(st));
-        } catch (Exception e) { }
         return new Notification.Builder(ctx, CH)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("学习弹幕已开启")
-            .setContentText(win + " 内使用手机时划过单词 · 熄屏不弹")
+            .setContentText("使用手机时划过单词 · 熄屏不弹")
             .setContentIntent(openIntent(ctx))
             .setOngoing(true)
             .build();

@@ -209,7 +209,7 @@ public class HtmlView {
         h.append("<span>—</span><input id='pend' type='time' value='").append(pend).append("'></div>");
         h.append("<button class='btn2' onclick='savePush()'>保存推送时间</button></div>");
         h.append("<div class='card'><div class='ct'>学习弹幕</div>");
-        h.append("<div class='wc'>开启后，在推送时段（").append(pstart).append("–").append(pend).append("）内使用手机时，会不时从屏幕右侧向左划过一条「单词 + 释义」。频率可自定义（亮屏 / 熄屏独立；熄屏默认 0 = 不弹）。需要「悬浮窗」权限。</div>");
+        h.append("<div class='wc'>开启后，使用手机时会不时从屏幕右侧向左划过一条「单词 + 释义」。<b>全天生效，不受上面的推送时段限制。</b>频率可自定义（亮屏 / 熄屏独立；熄屏默认 0 = 不弹）。需要「悬浮窗」权限。</div>");
         h.append("<div class='wc'>当前：<b>").append(dOn ? "已开启" : "已关闭").append("</b>｜悬浮窗权限：<b>").append(ov ? "已授予" : "未授予").append("</b></div>");
         h.append("<button class='btn2' onclick='App.toggleDanmaku()'>").append(dOn ? "关闭弹幕" : "开启弹幕").append("</button>");
         h.append("<button class='btn2' onclick='App.requestOverlay()'>授予「悬浮窗」权限</button>");
