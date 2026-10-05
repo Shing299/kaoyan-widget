@@ -14,9 +14,11 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
@@ -47,6 +49,9 @@ public class DanmakuOverlay {
     static final long BATCH_GAP_MS = 2500L;
     /** 待播批次队列上限，防止长期堆积。 */
     static final int MAX_QUEUE = 30;
+    /** 随机词池里的权重：到期复习词放 3 份，新词放 1 份（复习词露脸更频繁）。 */
+    static final int W_REVIEW = 3;
+    static final int W_NEW = 1;
 
     private final Context ctx;
     private WindowManager wm;
@@ -62,6 +67,11 @@ public class DanmakuOverlay {
     private final ArrayList<String> queue = new ArrayList<String>();
     private BroadcastReceiver screenRcv;
     private int lastIdx = -1;
+    /** 全词库，只加载一次（原来每条弹幕都重新读 300KB、解析 5398 行）。 */
+    private List<Words.W> allWords;
+    /** 随机词池与其签名；只在「日 / 计划 / 卡片数」变化时重建。 */
+    private ArrayList<Words.W> pool;
+    private String poolSig;
 
     public DanmakuOverlay(Context c) {
         this.ctx = c.getApplicationContext();
@@ -178,6 +188,72 @@ public class DanmakuOverlay {
         return d < MIN_GAP_MS ? MIN_GAP_MS : d;
     }
 
+    /** 全词库（懒加载，只解析一次）。 */
+    private List<Words.W> allWords() {
+        if (allWords == null) allWords = Words.load(ctx);
+        return allWords;
+    }
+
+    /**
+     * 弹幕的随机词池。
+     *
+     * 池子内容（按用户要求）：
+     *   1. **今天计划内的词**（`plan` 里 [词索引, 0新/1复]）—— 复习词放 {@link #W_REVIEW} 份、新词 1 份；
+     *   2. **已到期但没排进今天计划的复习词**（`cards` 里 dueDay <= 今天序号）—— 同样 3 份，
+     *      让因为 reviewCap 被挤出计划的词也有机会露脸；
+     *   3. 两者都为空时退回**全词库**（兜底，例如当天计划还没生成）。
+     *
+     * 因为池子里复习词占了 3 份，随机抽到复习词的概率约是新词的 3 倍 —— 弹幕更像复习提醒。
+     *
+     * 池子只在「日期 / plan 条数 / cards 条数 / 计划天数」变化时重建，
+     * 否则每弹一条都要遍历一遍 plan 与 cards。
+     */
+    private List<Words.W> danmakuPool(JSONObject st) {
+        List<Words.W> all = allWords();
+        if (all.isEmpty()) return all;
+        JSONArray plan = st.optJSONArray("plan");
+        JSONObject cards = st.optJSONObject("cards");
+        int dayNo = st.optInt("plan_day_no", 0);
+        String sig = st.optString("day", "") + "|" + (plan == null ? -1 : plan.length())
+                   + "|" + (cards == null ? -1 : cards.length()) + "|" + dayNo;
+        if (pool != null && sig.equals(poolSig)) return pool;
+
+        ArrayList<Words.W> p = new ArrayList<Words.W>();
+        HashSet<Integer> inPlan = new HashSet<Integer>();
+        int n = all.size();
+        try {
+            if (plan != null) {
+                for (int i = 0; i < plan.length(); i++) {
+                    JSONArray it = plan.optJSONArray(i);
+                    if (it == null || it.length() < 2) continue;
+                    int idx = it.optInt(0, -1), kind = it.optInt(1, 0);
+                    if (idx < 0 || idx >= n) continue;
+                    inPlan.add(Integer.valueOf(idx));
+                    int w = (kind == 1) ? W_REVIEW : W_NEW;
+                    for (int k = 0; k < w; k++) p.add(all.get(idx));
+                }
+            }
+            if (cards != null) {
+                java.util.Iterator<String> keys = cards.keys();
+                while (keys.hasNext()) {
+                    String k = keys.next();
+                    int idx;
+                    try { idx = Integer.parseInt(k); } catch (Exception e) { continue; }
+                    if (idx < 0 || idx >= n || inPlan.contains(Integer.valueOf(idx))) continue;
+                    JSONArray v = cards.optJSONArray(k);
+                    if (v == null || v.length() < 2) continue;
+                    if (v.optInt(1, Integer.MAX_VALUE) <= dayNo) {   // 已到期
+                        for (int j = 0; j < W_REVIEW; j++) p.add(all.get(idx));
+                    }
+                }
+            }
+        } catch (Throwable t) { }
+        if (p.isEmpty()) p.addAll(all);   // 兜底：退回全词库
+        pool = p;
+        poolSig = sig;
+        return pool;
+    }
+
     private boolean isInteractive() {
         try {
             PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
@@ -194,12 +270,12 @@ public class DanmakuOverlay {
         if (!queue.isEmpty()) {
             text = queue.remove(0);
         } else {
-            List<Words.W> ws = Words.load(ctx);
-            if (ws.isEmpty()) return;
-            int idx = rnd.nextInt(ws.size());
-            if (ws.size() > 1 && idx == lastIdx) idx = (idx + 1) % ws.size();
+            List<Words.W> pool = danmakuPool(st);
+            if (pool.isEmpty()) return;
+            int idx = rnd.nextInt(pool.size());
+            if (pool.size() > 1 && idx == lastIdx) idx = (idx + 1) % pool.size();
             lastIdx = idx;
-            text = Engine.danmakuText(ws.get(idx));
+            text = Engine.danmakuText(pool.get(idx));
         }
 
         TextView tv = new TextView(ctx);
