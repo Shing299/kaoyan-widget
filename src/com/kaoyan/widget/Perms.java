@@ -39,8 +39,31 @@ public class Perms {
                         new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_NOTIF);
                 // 引导弹窗在 onRequestPermissionsResult 里弹出，避免两个对话框重叠
             } else {
-                showGuide(a);
+                afterNotif(a);
             }
+        } catch (Throwable e) { }
+    }
+
+    /** 通知权限处理完之后：先引导「悬浮窗」权限，再引导后台运行。 */
+    static void afterNotif(Activity a) {
+        try {
+            if (!Settings.canDrawOverlays(a)) showOverlayGuide(a);
+            else showGuide(a);
+        } catch (Throwable e) { }
+    }
+
+    /** 引导开启「悬浮窗」权限（学习弹幕需要）。 */
+    static void showOverlayGuide(Activity a) {
+        try {
+            AlertDialog d = new AlertDialog.Builder(a)
+                .setTitle("开启悬浮窗权限")
+                .setMessage("「学习弹幕」需要「悬浮窗」权限，才能在你使用手机时从屏幕上划过单词。\n\n"
+                        + "点击「去开启」后，请在列表中找到本应用，允许它「显示在其他应用上层」。")
+                .setPositiveButton("去开启", new OverlayClick(a))
+                .setNegativeButton("以后再说", new SkipOverlayClick(a))
+                .create();
+            d.setCanceledOnTouchOutside(false);
+            d.show();
         } catch (Throwable e) { }
     }
 
@@ -100,6 +123,18 @@ public class Perms {
         }
     }
 
+    /** 请求「悬浮窗」权限（学习弹幕需要）。 */
+    static void requestOverlay(Activity a) {
+        try {
+            Intent it = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+            it.setData(Uri.parse("package:" + a.getPackageName()));
+            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            a.startActivity(it);
+        } catch (Throwable e) {
+            try { a.startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)); } catch (Throwable e2) { }
+        }
+    }
+
     private static void openAppDetails(Activity a) {
         try {
             Intent it = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
@@ -119,5 +154,17 @@ public class Perms {
         private final Activity a;
         BatteryClick(Activity a) { this.a = a; }
         public void onClick(DialogInterface d, int w) { requestIgnoreBattery(a); }
+    }
+
+    static class OverlayClick implements DialogInterface.OnClickListener {
+        private final Activity a;
+        OverlayClick(Activity a) { this.a = a; }
+        public void onClick(DialogInterface d, int w) { requestOverlay(a); showGuide(a); }
+    }
+
+    static class SkipOverlayClick implements DialogInterface.OnClickListener {
+        private final Activity a;
+        SkipOverlayClick(Activity a) { this.a = a; }
+        public void onClick(DialogInterface d, int w) { showGuide(a); }
     }
 }

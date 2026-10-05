@@ -13,6 +13,7 @@ public class BatchReceiver extends BroadcastReceiver {
         try {
             if (Scheduler.ACTION_ROLL.equals(a)) {
                 Scheduler.schedule(ctx);
+                beat(ctx);
                 return;
             }
             if (Scheduler.ACTION_FIRE.equals(a)) {
@@ -26,7 +27,17 @@ public class BatchReceiver extends BroadcastReceiver {
                     Store.saveState(ctx, st);
                 }
                 Engine.pushNext(ctx, words, st);
+                beat(ctx);
             }
         } catch (Throwable e) { android.util.Log.e("KAOYAN","ERR "+e); e.printStackTrace(); }
+    }
+
+    /**
+     * 弹幕心跳：每天每批推送闹钟都会走到这里。
+     * 若弹幕开着但服务已被系统冻结/停掉，这一步会把它重新拉起来
+     * （原来只能等用户重新打开 App，弹幕会一直静默）。
+     */
+    static void beat(Context ctx) {
+        try { DanmakuService.syncFromState(ctx); } catch (Throwable t) { }
     }
 }

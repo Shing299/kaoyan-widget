@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
         super.onRequestPermissionsResult(req, perms, res);
         if (req == Perms.REQ_NOTIF) {
-            try { Perms.showGuide(this); } catch (Exception e) { }
+            try { Perms.afterNotif(this); } catch (Exception e) { }
         }
     }
 
@@ -91,6 +91,22 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        load();
+        syncDanmaku();
+    }
+
+    /** 根据开关与悬浮窗权限同步学习弹幕服务。 */
+    void syncDanmaku() {
+        try {
+            DanmakuService.sync(this,
+                "1".equals(Store.loadState(this).optString("danmaku_on", "0")));
+        } catch (Exception e) { }
+    }
+
+    /** 系统深浅色切换时即时刷新界面。 */
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration cfg) {
+        super.onConfigurationChanged(cfg);
         load();
     }
 

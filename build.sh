@@ -24,6 +24,24 @@ KEY_PASS="${KEY_PASS:-$KS_PASS}"
 
 OUT="$HERE/out"
 
+# javac / java 有时不在 PATH 里（例如 Termux 里 $PREFIX/bin/javac 是坏软链），显式找一次 JDK
+if ! command -v javac >/dev/null 2>&1; then
+  for cand in "${PREFIX:-/data/data/com.termux/files/usr}"/lib/jvm/java-*-openjdk \
+              "${JAVA_HOME:-/nonexistent}"; do
+    if [ -x "$cand/bin/javac" ]; then
+      JAVA_HOME="$cand"
+      PATH="$cand/bin:$PATH"
+      export JAVA_HOME PATH
+      break
+    fi
+  done
+fi
+
+if ! command -v javac >/dev/null 2>&1; then
+  echo "找不到 javac：请安装 JDK，或把它的 bin 目录加进 PATH / 设置 JAVA_HOME"
+  exit 1
+fi
+
 if [ ! -f "$ANDROID_JAR" ]; then
   echo "android.jar 不存在: $ANDROID_JAR"
   echo "请通过环境变量 ANDROID_JAR 指定路径"

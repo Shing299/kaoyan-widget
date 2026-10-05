@@ -19,6 +19,9 @@ public class Bridge {
     @JavascriptInterface public void resetWords() { a.runOnUiThread(new ResetTask(a)); }
     @JavascriptInterface public void openSetup() { a.runOnUiThread(new SetupTask(a)); }
     @JavascriptInterface public void setPushTime(String s, String e) { a.runOnUiThread(new PushTimeTask(a, s, e)); }
+    @JavascriptInterface public void toggleDanmaku() { a.runOnUiThread(new DanmakuToggleTask(a)); }
+    @JavascriptInterface public void requestOverlay() { a.runOnUiThread(new OverlayTask(a)); }
+    @JavascriptInterface public void setDanmakuCfg(String on, String off, String size, String color, String font, String bold) { a.runOnUiThread(new DanmakuCfgTask(a, on, off, size, color, font, bold)); }
 
     static void doPush(Context ctx) {
         try {
@@ -109,5 +112,89 @@ public class Bridge {
         Activity a; String s, e;
         PushTimeTask(Activity a, String s, String e) { this.a = a; this.s = s; this.e = e; }
         public void run() { doSetPushTime(a, s, e); ((MainActivity) a).load(); }
+    }
+
+    /** 开关学习弹幕；开启时若已有悬浮窗权限则直接启动服务。 */
+    static void doToggleDanmaku(Context ctx) {
+        try {
+            JSONObject st = Store.loadState(ctx);
+            Engine.ensureState(st);
+            boolean on = !"1".equals(st.optString("danmaku_on", "0"));
+            st.put("danmaku_on", on ? "1" : "0");
+            Store.saveState(ctx, st);
+            DanmakuService.sync(ctx, on);
+        } catch (Throwable t) { }
+    }
+
+    /** 保存弹幕设置：频率（个/秒，亮屏/熄屏独立）与样式（字号/颜色/字体/加粗）。 */
+    static void doSetDanmakuCfg(Context ctx, String onS, String offS,
+                                String sizeS, String color, String font, String bold) {
+        try {
+            JSONObject st = Store.loadState(ctx);
+            Engine.ensureState(st);
+            st.put("danmaku_rate_on", parseRate(onS, 0.02));
+            st.put("danmaku_rate_off", parseRate(offS, 0.0));
+            st.put("danmaku_size", parseSize(sizeS, 18));
+            st.put("danmaku_color", normColor(color));
+            st.put("danmaku_font", ("serif".equals(font) || "mono".equals(font)) ? font : "sans");
+            st.put("danmaku_bold", "0".equals(bold) ? "0" : "1");
+            Store.saveState(ctx, st);
+            if ("1".equals(st.optString("danmaku_on", "0"))) DanmakuService.sync(ctx, true);
+        } catch (Throwable t) { }
+    }
+
+    /** 解析字号（sp）：8–80。 */
+    static int parseSize(String s, int def) {
+        try {
+            int v = (int) Math.round(Double.parseDouble(s.trim()));
+            if (v < 8) v = 8;
+            if (v > 80) v = 80;
+            return v;
+        } catch (Exception e) { return def; }
+    }
+
+    /** 规范化颜色为 "#RRGGBB"，非法取白色。 */
+    static String normColor(String s) {
+        try {
+            String t = s == null ? "" : s.trim();
+            if (!t.startsWith("#")) t = "#" + t;
+            if (t.length() == 4) {
+                char r = t.charAt(1), g = t.charAt(2), b = t.charAt(3);
+                t = "#" + r + r + g + g + b + b;
+            }
+            if (!t.matches("#[0-9a-fA-F]{6}")) return "#FFFFFF";
+            return t.toUpperCase();
+        } catch (Exception e) { return "#FFFFFF"; }
+    }
+
+    /** 解析频率：单位「个/秒」，范围 0–2，非法则取默认值。 */
+    static double parseRate(String s, double def) {
+        try {
+            double v = Double.parseDouble(s.trim());
+            if (v < 0) v = 0;
+            if (v > 2) v = 2;
+            return v;
+        } catch (Exception e) { return def; }
+    }
+
+    static class DanmakuToggleTask implements Runnable {
+        Activity a;
+        DanmakuToggleTask(Activity a) { this.a = a; }
+        public void run() { doToggleDanmaku(a); ((MainActivity) a).load(); }
+    }
+
+    static class OverlayTask implements Runnable {
+        Activity a;
+        OverlayTask(Activity a) { this.a = a; }
+        public void run() { Perms.requestOverlay(a); }
+    }
+
+    static class DanmakuCfgTask implements Runnable {
+        Activity a; String on, off, size, color, font, bold;
+        DanmakuCfgTask(Activity a, String on, String off, String size, String color, String font, String bold) {
+            this.a = a; this.on = on; this.off = off; this.size = size;
+            this.color = color; this.font = font; this.bold = bold;
+        }
+        public void run() { doSetDanmakuCfg(a, on, off, size, color, font, bold); ((MainActivity) a).load(); }
     }
 }

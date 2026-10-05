@@ -115,6 +115,13 @@ public class Engine {
             if (!st.has("plan_day_no")) st.put("plan_day_no", 0);
             if (!st.has("push_start")) st.put("push_start", fmtHM(DEF_START_MIN));
             if (!st.has("push_end")) st.put("push_end", fmtHM(DEF_END_MIN));
+            if (!st.has("danmaku_on")) st.put("danmaku_on", "0");
+            if (!st.has("danmaku_rate_on")) st.put("danmaku_rate_on", 0.02);
+            if (!st.has("danmaku_rate_off")) st.put("danmaku_rate_off", 0.0);
+            if (!st.has("danmaku_size")) st.put("danmaku_size", 18);
+            if (!st.has("danmaku_color")) st.put("danmaku_color", "#FFFFFF");
+            if (!st.has("danmaku_font")) st.put("danmaku_font", "sans");
+            if (!st.has("danmaku_bold")) st.put("danmaku_bold", "1");
         } catch (Exception e) { }
         return st;
     }
