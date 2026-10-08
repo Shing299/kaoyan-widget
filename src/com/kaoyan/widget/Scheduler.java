@@ -39,9 +39,19 @@ public class Scheduler {
     }
 
     public static void cancelAll(Context c) {
+        cancelFires(c);
+        AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+        am.cancel(pi(c, RC_ROLL, ACTION_ROLL));
+    }
+
+    /**
+     * 只撤销剩余的「推送批次」闹钟，**保留**每日 ROLL 闹钟。
+     * 当天计划推完后调用：否则剩下十几个闹钟还会照常把设备唤醒，
+     * 醒来却发现没词可推（白耗电）。
+     */
+    public static void cancelFires(Context c) {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         for (int i = 0; i <= MAX_BATCH; i++) am.cancel(pi(c, RC_BASE + i, ACTION_FIRE));
-        am.cancel(pi(c, RC_ROLL, ACTION_ROLL));
     }
 
     /** 确保今天有计划，并为剩余批次安排闹钟。返回安排批次数（-1 出错）。 */

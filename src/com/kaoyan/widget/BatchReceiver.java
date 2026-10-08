@@ -28,7 +28,12 @@ public class BatchReceiver extends BroadcastReceiver {
                 }
                 // 一次推送、两种呈现：同一批词既进通知，也交给弹幕划过
                 String[] dm = Engine.pushNext(ctx, words, st);
-                if (dm != null && dm.length > 0) BotService.showBatch(ctx, dm);
+                if (dm != null && dm.length > 0) {
+                    BotService.showBatch(ctx, dm);
+                } else {
+                    // 今天的计划推完了：撤掉剩余批次闹钟，别再白唤醒（每日 ROLL 闹钟保留）
+                    try { Scheduler.cancelFires(ctx); } catch (Throwable t) { }
+                }
                 beat(ctx);
             }
         } catch (Throwable e) { android.util.Log.e("KAOYAN","ERR "+e); e.printStackTrace(); }

@@ -50,11 +50,18 @@ public class BotService extends Service {
         if (overlay == null) overlay = new DanmakuOverlay(this);
         overlay.start();
 
-        if (intent != null && ACTION_SHOW_BATCH.equals(intent.getAction())) {
+        boolean showBatch = intent != null && ACTION_SHOW_BATCH.equals(intent.getAction());
+        if (showBatch) {
             overlay.enqueue(intent.getStringArrayExtra(EXTRA_LINES));
         }
 
-        try { Scheduler.schedule(this); } catch (Exception e) { }
+        // 只有「确保服务在跑」的那次启动才重排闹钟。
+        // 每推一批都会 startService 一次，若那时也重排，就是每分钟把 20 多个
+        // 精确闹钟全部 cancel + 重新 set 一遍（纯属白耗，还会把当天剩余时间重新随机）。
+        // 已排好的闹钟本来就是「醒来推下一批」，不依赖当前 plan_pos，所以不重排也是对的。
+        if (!showBatch) {
+            try { Scheduler.schedule(this); } catch (Exception e) { }
+        }
         return START_STICKY;
     }
 

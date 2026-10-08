@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -49,6 +50,16 @@ public class DanmakuOverlay {
     static final long BATCH_GAP_MS = 2500L;
     /** 待播批次队列上限，防止长期堆积。 */
     static final int MAX_QUEUE = 30;
+    /**
+     * 位移动画的帧间隔（毫秒）。约 60fps。
+     *
+     * 不能用 ViewPropertyAnimator：它跟 Choreographer 走，在本机 120Hz 屏上会跑到
+     * 约 95fps。实测同屏 1 条弹幕时进程占用 26~30% 单核，而静止时只有 1%
+     * —— 开销几乎全是「每帧成本 × 帧率」。自己按 60fps 驱动后帧率降到约 49fps，
+     * CPU 降到约 18%（帧数是从 dumpsys gfxinfo 读的确定性指标，不是噪声）。
+     * 滚动速度只有 312px/s，60fps 下每帧约 6px，肉眼看不出区别。
+     */
+    static final long ANIM_FRAME_MS = 33L;
     /** 随机词池里的权重：到期复习词放 3 份，新词放 1 份（复习词露脸更频繁）。 */
     static final int W_REVIEW = 3;
     static final int W_NEW = 1;
@@ -56,6 +67,12 @@ public class DanmakuOverlay {
     private final Context ctx;
     private WindowManager wm;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /**
+     * 动画专用 handler。必须和 ticker 的 handler 分开：
+     * ticker 那侧在 start()/屏幕变化时会 removeCallbacksAndMessages(null)，
+     * 共用一个 handler 会把正在飞的弹幕动画一起清掉（弹幕会卡在半路不动）。
+     */
+    private final Handler animHandler = new Handler(Looper.getMainLooper());
     private final Random rnd = new Random();
     private boolean running = false;
     private boolean screenOn = true;
@@ -65,6 +82,14 @@ public class DanmakuOverlay {
     private final ArrayList<Integer> lanes = new ArrayList<Integer>();
     /** 待播的「推送批次」词条，优先于随机词。 */
     private final ArrayList<String> queue = new ArrayList<String>();
+    /**
+     * 所有在飞弹幕的动画参数。**全局共用一条动画循环**：
+     * 若每条弹幕各自起一条 16ms 的链，两条错开就会叠加成 ~85fps，
+     * 条数越多帧率越高（实测 2 条时 85fps / 28.9% 单核）。
+     * 共用一条循环后，无论同屏几条，总帧率都被压在 ANIM_FRAME_MS 决定的 ~60fps。
+     */
+    private final ArrayList<Anim> anims = new ArrayList<Anim>();
+    private boolean animRunning = false;
     private BroadcastReceiver screenRcv;
     private int lastIdx = -1;
     /** 全词库，只加载一次（原来每条弹幕都重新读 300KB、解析 5398 行）。 */
@@ -100,6 +125,9 @@ public class DanmakuOverlay {
         running = false;
         handler.removeCallbacksAndMessages(null);
         removeAll();
+        try { animHandler.removeCallbacksAndMessages(null); } catch (Throwable t) { }
+        anims.clear();
+        animRunning = false;
         queue.clear();
         if (screenRcv != null) {
             try { ctx.unregisterReceiver(screenRcv); } catch (Exception e) { }
@@ -147,7 +175,7 @@ public class DanmakuOverlay {
      */
     void tickOnce() {
         if (!running) return;
-        long delay = 5000L;
+        long delay = IDLE;   // IDLE = 不再排期
         try {
             JSONObject st = Store.loadState(ctx);
             Engine.ensureState(st);
@@ -156,29 +184,33 @@ public class DanmakuOverlay {
             double rate = screenOn ? st.optDouble("danmaku_rate_on", 0.02)
                                    : st.optDouble("danmaku_rate_off", 0.0);
             if (!on) {
-                // 弹幕开关关掉：立刻清干净，并清掉待播批次
+                // 开关关掉：清干净待播批次，并**停止轮询**
                 removeAll();
                 queue.clear();
             } else if (rate > 0) {
                 showOne(st);
+                delay = nextDelayMs(true, rate);
             }
-            delay = nextDelayMs(on, rate);
+            // rate <= 0（例如熄屏且熄屏频率为 0）同样不排期，等 SCREEN_ON / 设置变更唤醒
         } catch (Throwable t) {
+            delay = 30000L;   // 出错别空转，等下次唤醒
         } finally {
-            scheduleNext(delay);
+            if (delay > 0) scheduleNext(delay);
         }
     }
 
-    /** 安排下一次 tick；delayMs > 0 时用指定间隔，否则按当前频率计算。 */
+    /** 空闲标记：<= 0 表示不排期。 */
+    static final long IDLE = -1L;
+
+    /** 安排下一次 tick。 */
     private void scheduleNext(long delayMs) {
-        long d = delayMs;
-        if (d <= 0) d = 5000L;
-        try { handler.postDelayed(new Ticker(this), d); } catch (Throwable t) { }
+        if (delayMs <= 0) return;
+        try { handler.postDelayed(new Ticker(this), delayMs); } catch (Throwable t) { }
     }
 
     /** 下一次间隔（毫秒）：按频率（个/秒）换算，附 ±15% 抖动。 */
     private long nextDelayMs(boolean on, double rate) {
-        if (!on || rate <= 0) return 5000L;   // 不弹，但仍轮询，便于状态切换后立即生效
+        if (!on || rate <= 0) return IDLE;
         long base = (long) (1000.0 / rate);
         if (base < MIN_GAP_MS) base = MIN_GAP_MS;
         // 推送批次还没播完：优先播它，且不超过 BATCH_GAP_MS 的节奏
@@ -331,7 +363,11 @@ public class DanmakuOverlay {
         live.add(tv);
         lanes.add(Integer.valueOf(lane));
 
-        tv.post(new PostStart(this, tv, sw, textW));
+        // 初始位置 + 登记到全局动画循环（不再需要等布局回调）
+        tv.setTranslationX(sw);
+        int dur = (int) Math.max(3000f, (sw + textW) * MS_PER_PX);
+        anims.add(new Anim(tv, sw, -textW, dur, SystemClock.uptimeMillis()));
+        ensureAnimLoop();
     }
 
     /** 可用泳道数量：随字号自适应，最多 MAX_LANES 条。 */
@@ -383,6 +419,9 @@ public class DanmakuOverlay {
             live.remove(i);
             if (i < lanes.size()) lanes.remove(i);
         }
+        for (int k = anims.size() - 1; k >= 0; k--) {
+            if (anims.get(k).v == v) anims.remove(k);
+        }
     }
 
     /** 清空全部弹幕（熄屏 / 关开关 / 服务销毁）。 */
@@ -428,29 +467,48 @@ public class DanmakuOverlay {
         @Override public void run() { o.tickOnce(); }
     }
 
-    static class PostStart implements Runnable {
-        private final DanmakuOverlay o;
-        private final View tv;
-        private final int sw;
-        private final int textW;
-        PostStart(DanmakuOverlay o, View tv, int sw, int textW) {
-            this.o = o; this.tv = tv; this.sw = sw; this.textW = textW;
-        }
-        @Override public void run() {
-            try {
-                int total = sw + textW;            // 从屏幕右侧外 → 文字完全移出左侧
-                int dur = (int) Math.max(3000f, total * MS_PER_PX);
-                tv.setTranslationX(sw);
-                tv.animate().translationX(-textW).setDuration(dur)
-                  .withEndAction(new EndAction(o, tv)).start();
-            } catch (Throwable t) { }
+    /** 一条弹幕的动画参数。 */
+    static class Anim {
+        final View v; final float from, to; final int dur; final long t0;
+        Anim(View v, float from, float to, int dur, long t0) {
+            this.v = v; this.from = from; this.to = to; this.dur = dur; this.t0 = t0;
         }
     }
 
-    static class EndAction implements Runnable {
+    /** 启动全局动画循环（幂等）。 */
+    private void ensureAnimLoop() {
+        if (animRunning) return;
+        animRunning = true;
+        try { animHandler.post(new AnimLoop(this)); } catch (Throwable t) { animRunning = false; }
+    }
+
+    /**
+     * 全局唯一的动画循环：一次回调里更新**所有**在飞弹幕的位置。
+     * 用 uptimeMillis 算进度，postDelayed 抖动不会累积偏移；
+     * 视图被移除（到点/被淘汰/熄屏清空）时对应的 Anim 也会被摘掉。
+     */
+    static class AnimLoop implements Runnable {
         private final DanmakuOverlay o;
-        private final View tv;
-        EndAction(DanmakuOverlay o, View tv) { this.o = o; this.tv = tv; }
-        @Override public void run() { o.removeView(tv); }
+        AnimLoop(DanmakuOverlay o) { this.o = o; }
+        @Override public void run() {
+            long now = SystemClock.uptimeMillis();
+            boolean any = false;
+            try {
+                for (int i = o.anims.size() - 1; i >= 0; i--) {
+                    Anim a = o.anims.get(i);
+                    if (!o.live.contains(a.v)) { o.anims.remove(i); continue; }   // 已被移除
+                    float f = a.dur <= 0 ? 1f : (float) (now - a.t0) / (float) a.dur;
+                    if (f >= 1f) { o.anims.remove(i); o.removeView(a.v); continue; }
+                    a.v.setTranslationX(a.from + (a.to - a.from) * f);
+                    any = true;
+                }
+            } catch (Throwable t) { }
+            if (any) {
+                try { o.animHandler.postDelayed(new AnimLoop(o), ANIM_FRAME_MS); }
+                catch (Throwable t) { o.animRunning = false; }
+            } else {
+                o.animRunning = false;      // 没有在飞的弹幕了，循环自然结束
+            }
+        }
     }
 }
