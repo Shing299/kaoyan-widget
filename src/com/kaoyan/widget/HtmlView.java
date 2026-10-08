@@ -153,8 +153,8 @@ public class HtmlView {
         boolean dOn = "1".equals(pst.optString("danmaku_on", "0"));
         boolean ov = false;
         try { ov = Settings.canDrawOverlays(ctx); } catch (Exception e) { }
-        String rateOn = fmtRate(pst.optDouble("danmaku_rate_on", 0.02));
-        String rateOff = fmtRate(pst.optDouble("danmaku_rate_off", 0.0));
+        double rateOn = pst.optDouble("danmaku_rate_on", 0.02);
+        double rateOff = pst.optDouble("danmaku_rate_off", 0.0);
         String dSize = String.valueOf(pst.optInt("danmaku_size", 18));
         String dColor = pst.optString("danmaku_color", "#FFFFFF");
         String dFont = pst.optString("danmaku_font", "sans");
@@ -181,6 +181,12 @@ public class HtmlView {
         h.append("input[type=number]{width:100%;box-sizing:border-box;font-size:17px;padding:12px;border:1px solid #e3dbf5;border-radius:12px;background:#fff;color:#2b2340}");
         h.append(".row{display:flex;gap:10px;align-items:center}");
         h.append(".chip{display:inline-block;width:32px;height:32px;border-radius:9px;border:1px solid #ded4f2;cursor:pointer}");
+        h.append(".srow{display:flex;align-items:center;gap:10px;margin-top:6px}");
+        h.append(".slb{flex:0 0 auto;min-width:34px;font-size:13px;color:#7a5cc0;font-weight:600}");
+        h.append(".sld{flex:1;height:30px;accent-color:#8b6fd6}");
+        h.append(".sval{flex:0 0 auto;min-width:74px;text-align:right;font-size:12px;color:#5b4a92}");
+        h.append(".ticks{display:flex;justify-content:space-between;font-size:10px;color:#b3aacb;margin:0 84px 12px 44px}");
+        h.append(".ticks .on{color:#7a5cc0;font-weight:700}");
         h.append("html.dk{color-scheme:dark}");
         h.append("html.dk body{background:#151221;color:#e7e3f5}");
         h.append("html.dk h1{color:#f0ecff}");
@@ -192,6 +198,10 @@ public class HtmlView {
         h.append("html.dk .btn2{background:#211c33;border-color:#3a3157;color:#cfc6e8}");
         h.append("html.dk input[type=date],html.dk input[type=time],html.dk input[type=number],html.dk input[type=text]{background:#1b1730;border-color:#3a3157;color:#e7e3f5}");
         h.append("html.dk .chip{border-color:#4a4066}");
+        h.append("html.dk .slb{color:#b9a4ec}");
+        h.append("html.dk .sval{color:#cfc6e8}");
+        h.append("html.dk .ticks{color:#6f6690}");
+        h.append("html.dk .ticks .on{color:#b9a4ec}");
         h.append("</style></head><body>");
         h.append("<h1>欢迎使用 · 考研单词</h1>");
         h.append("<p class='sub'>首次使用请设置初试日期，系统会按剩余天数和词库总量，自动推算每日需要新学的单词数量。</p>");
@@ -214,9 +224,9 @@ public class HtmlView {
         h.append("<div class='wc'>当前：<b>").append(dOn ? "已开启" : "已关闭").append("</b>｜悬浮窗权限：<b>").append(ov ? "已授予" : "未授予").append("</b></div>");
         h.append("<button class='btn2' onclick='App.toggleDanmaku()'>").append(dOn ? "关闭弹幕" : "开启弹幕").append("</button>");
         h.append("<button class='btn2' onclick='App.requestOverlay()'>授予「悬浮窗」权限</button>");
-        h.append("<div class='wc' style='margin-top:14px'>弹出频率（单位：个/秒；0 = 不弹）</div>");
-        h.append("<div class='row'><span class='wc' style='margin:0;flex:0 0 auto'>亮屏</span><input id='dron' type='number' step='0.01' min='0' max='2' value='").append(rateOn).append("'><span class='wc' style='margin:0;flex:0 0 auto'>个/s</span></div>");
-        h.append("<div class='row' style='margin-top:8px'><span class='wc' style='margin:0;flex:0 0 auto'>熄屏</span><input id='droff' type='number' step='0.01' min='0' max='2' value='").append(rateOff).append("'><span class='wc' style='margin:0;flex:0 0 auto'>个/s</span></div>");
+        h.append("<div class='wc' style='margin-top:14px'>弹出频率（拖动滑条；0 = 不弹）</div>");
+        h.append(rateSlider("on", "亮屏", rateOn));
+        h.append(rateSlider("off", "熄屏", rateOff));
         h.append("<div class='wc' style='margin-top:14px'>样式</div>");
         h.append("<div class='row'><span class='wc' style='margin:0;flex:0 0 auto'>字体</span>");
         h.append("<button type='button' class='btn2' style='margin-top:0;flex:1' onclick=\"setFont('sans')\">默认</button>");
@@ -251,6 +261,13 @@ public class HtmlView {
         h.append("function setFont(f){document.getElementById('dfont').value=f;alert('字体已选：'+f+'（点「保存弹幕设置」生效）');}");
         h.append("function toggleBold(){var b=document.getElementById('dbold');b.value=(b.value==='1'?'0':'1');document.getElementById('dboldBtn').innerText='加粗：'+(b.value==='1'?'开':'关');}");
         h.append("function pickColor(c){document.getElementById('dcolor').value=c;}");
+        h.append("var STOPS=[0,0.05,0.1,0.2,0.5,1,2];");
+        h.append("function stopText(v){return v===0?'不弹':v+' 个/秒';}");
+        h.append("function onRate(k){var r=document.getElementById('dr'+k+'R');var i=parseInt(r.value,10);");
+        h.append("var v=STOPS[i];document.getElementById('dr'+k).value=v;");
+        h.append("document.getElementById('dr'+k+'V').innerText=stopText(v);");
+        h.append("var ts=document.getElementById('dr'+k+'R').parentNode.nextSibling;");
+        h.append("if(ts&&ts.children){for(var j=0;j<ts.children.length;j++){ts.children[j].className=(j===i?'on':'');}}}");
         h.append("function saveDm(){var a=document.getElementById('dron').value;var b=document.getElementById('droff').value;var s=document.getElementById('dsize').value;var c=document.getElementById('dcolor').value;var f=document.getElementById('dfont').value;var bd=document.getElementById('dbold').value;App.setDanmakuCfg(a,b,s,c,f,bd);alert('已保存弹幕设置');}");
         h.append("calc();");
         h.append("</script>");
@@ -265,6 +282,51 @@ public class HtmlView {
                     & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
             return m == android.content.res.Configuration.UI_MODE_NIGHT_YES;
         } catch (Exception e) { return false; }
+    }
+
+    /** 弹出频率的档位（个/秒）。0 = 不弹。滑条按这个表分档。 */
+    static final double[] RATE_STOPS = {0, 0.05, 0.1, 0.2, 0.5, 1, 2};
+
+    /** 当前频率对应的档位下标（取最接近的一档）。 */
+    static int rateIndex(double v) {
+        int best = 0;
+        double bd = Double.MAX_VALUE;
+        for (int i = 0; i < RATE_STOPS.length; i++) {
+            double d = Math.abs(RATE_STOPS[i] - v);
+            if (d < bd) { bd = d; best = i; }
+        }
+        return best;
+    }
+
+    /** 档位对应的显示文本。 */
+    static String stopText(int i) {
+        double v = RATE_STOPS[i];
+        return v == 0 ? "不弹" : fmtRate(v) + " 个/秒";
+    }
+
+    /**
+     * 分档滑条控件：滑条 + 实时数值 + 刻度标签 + 同名隐藏字段。
+     * 隐藏字段（dron / droff）保存时仍由原来的 saveDm() 读取，所以 Bridge 侧不用改。
+     */
+    static String rateSlider(String id, String label, double cur) {
+        int idx = rateIndex(cur);
+        StringBuilder b = new StringBuilder();
+        b.append("<div class='srow'><span class='slb'>").append(label).append("</span>");
+        b.append("<input id='dr").append(id).append("R' class='sld' type='range' min='0' max='")
+         .append(RATE_STOPS.length - 1).append("' step='1' value='").append(idx)
+         .append("' oninput=\"onRate('").append(id).append("')\">");
+        b.append("<span id='dr").append(id).append("V' class='sval'>")
+         .append(stopText(idx)).append("</span></div>");
+        b.append("<div class='ticks'>");
+        for (int i = 0; i < RATE_STOPS.length; i++) {
+            double v = RATE_STOPS[i];
+            b.append("<span").append(i == idx ? " class='on'" : "").append(">")
+             .append(v == 0 ? "0" : fmtRate(v)).append("</span>");
+        }
+        b.append("</div>");
+        b.append("<input type='hidden' id='dr").append(id).append("' value='")
+         .append(fmtRate(RATE_STOPS[idx])).append("'>");
+        return b.toString();
     }
 
     /** 频率显示：整数去掉小数点。 */

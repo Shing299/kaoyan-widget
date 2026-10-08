@@ -13,12 +13,13 @@
 
 最新版本见 [Releases](https://github.com/shing299/kaoyan-widget/releases)：
 
+- **v1.2.1**：[kaoyan-widget-v1.2.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2.1/kaoyan-widget-v1.2.1.apk)
 - **v1.2**：[kaoyan-widget-v1.2.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2/kaoyan-widget-v1.2.apk)
 - **v1.1.1**：[kaoyan-widget-v1.1.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.1.1/kaoyan-widget-v1.1.1.apk)
 
 ```bash
 # 安装 / 覆盖升级
-pm install -r -d kaoyan-widget-v1.2.apk
+pm install -r -d kaoyan-widget-v1.2.1.apk
 ```
 
 ## 📸 截图
@@ -122,7 +123,9 @@ pm install -r -d out/app.apk
 
 ## 🗓 更新日志
 
-- **未发布（性能优化）**
+- **v1.2.1**
+  - **弹幕弹出频率改成「分档滑条」**：原来是数字输入框（手机上要弹键盘、还能填出 0.37 这种无意义值），
+    现在是滑条 + 实时数值 + 刻度标签，固定 7 档：`0（不弹）/ 0.05 / 0.1 / 0.2 / 0.5 / 1 / 2`，亮屏 / 熄屏各一条。
   - **弹幕动画改为全局共享的 ~60fps 循环**。原来用 `ViewPropertyAnimator`，它跟 Choreographer 走，
     在本机 120Hz 屏上跑到约 91fps，同屏 1 条弹幕就吃掉约 30% 单核。
     改为所有在飞弹幕共用一个固定帧间隔的循环后：**帧率 91→42fps，动画期间进程 CPU 30.6%→17.9%**。
