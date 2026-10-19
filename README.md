@@ -3,6 +3,8 @@
 一个运行在 Android 上的 **考研英语单词定时推送** 桌面小组件 + App。
 每天按计划推送一组单词（桌面小组件 + 通知），并根据距离初试的天数自动倒推每日新学词量。
 
+> 📖 **详细说明见 [docs/项目说明.md](docs/项目说明.md)** —— 功能、算法、状态字段、构建方式、版本历史都在里面。
+
 > ⚠️ **本项目由 AI 生成**
 > 本仓库的源码、构建脚本与文档均由 **AI（大语言模型）** 生成，经人工测试与调试后开源。
 > 仅供学习交流使用，请自行评估（尤其是定时/通知/权限相关行为）后再安装使用。
@@ -13,13 +15,14 @@
 
 最新版本见 [Releases](https://github.com/shing299/kaoyan-widget/releases)：
 
+- **v1.3**：[kaoyan-widget-v1.3.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3/kaoyan-widget-v1.3.apk)
 - **v1.2.1**：[kaoyan-widget-v1.2.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2.1/kaoyan-widget-v1.2.1.apk)
 - **v1.2**：[kaoyan-widget-v1.2.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2/kaoyan-widget-v1.2.apk)
 - **v1.1.1**：[kaoyan-widget-v1.1.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.1.1/kaoyan-widget-v1.1.1.apk)
 
 ```bash
 # 安装 / 覆盖升级
-pm install -r -d kaoyan-widget-v1.2.1.apk
+pm install -r -d kaoyan-widget-v1.3.apk
 ```
 
 ## 📸 截图
@@ -123,15 +126,18 @@ pm install -r -d out/app.apk
 
 ## 🗓 更新日志
 
-- **v1.2.2**（未发布）
+- **v1.3**
   - **侧边栏改为底部 Dock**：原来左侧抽屉的 5 个菜单项拆成 Dock 的两项 ——
     「今日单词」（回主页 / 回顶部）和「设置」。
     原抽屉里的「立即推送一批」「刷新数据」移到设置页的「快捷操作」卡片；
     原「设置 / 换词库」就是 Dock 的「设置」本身。
   - **回到顶部改为悬浮按钮**：位于 Dock 上方，**只在页面不在顶部时出现**且可点击，
     滚回顶部后自动隐藏。
-  - 原抽屉底部那几行信息（推送时段 / 初试倒计时 / 每日词量）挪到主页标题下方，信息不丢失。
+  - **设置页标题改为「设置」**：去掉首次向导时期的「欢迎使用 · 考研单词」和那段引导语。
+  - **首页精简**：去掉「推送时段 / 初试 / 每日词量」那一行，
+    初试倒计时改为**标题行最右侧的斜体小字**。
   - Dock 两项加了 `role="button"` / `aria-current`，读屏（TalkBack）能正确识别为按钮。
+  - 新增 [docs/项目说明.md](docs/项目说明.md)：功能、学习计划算法、弹幕渲染、状态字段、构建与版本历史。
 - **v1.2.1**
   - **弹幕弹出频率改成「分档滑条」**：原来是数字输入框（手机上要弹键盘、还能填出 0.37 这种无意义值），
     现在是滑条 + 实时数值 + 刻度标签，固定 7 档：`0（不弹）/ 0.05 / 0.1 / 0.2 / 0.5 / 1 / 2`，亮屏 / 熄屏各一条。
