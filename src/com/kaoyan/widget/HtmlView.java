@@ -183,8 +183,9 @@ public class HtmlView {
         h.append("html.dk .ticks .on{color:#b9a4ec}");
         appendDockCss(h);
         h.append("</style></head><body>");
-        h.append("<h1>欢迎使用 · 考研单词</h1>");
-        h.append("<p class='sub'>首次使用请设置初试日期，系统会按剩余天数和词库总量，自动推算每日需要新学的单词数量。</p>");
+        // 设置页现在是底部 Dock 的一个 tab，不再是「首次使用向导」，
+        // 标题直接用「设置」，原来那段欢迎语/说明去掉。
+        h.append("<h1 style='margin-bottom:18px'>设置</h1>");
         h.append("<label class='lb'>初试日期</label>");
         h.append("<input id='exam' type='date' value='").append(val).append("'>");
         h.append("<div id='calc' class='calc'></div>");
