@@ -27,9 +27,9 @@ pm install -r -d kaoyan-widget-v1.3.apk
 
 ## 📸 截图
 
-| 权限引导（首次启动） | 主界面 · 今日单词 | 菜单 |
+| 权限引导（首次启动） | 主界面 · 今日单词 | 设置 |
 | :---: | :---: | :---: |
-| ![权限引导](docs/screenshot-permission.png) | ![主界面](docs/screenshot-main.png) | ![菜单](docs/screenshot-menu.png) |
+| ![权限引导](docs/screenshot-permission.png) | ![主界面](docs/screenshot-main.png) | ![设置](docs/screenshot-settings.png) |
 
 > 截图为实机运行效果（OnePlus / ColorOS）。首次启动会申请通知权限，并弹窗引导开启自启动、关闭电池优化。
 
