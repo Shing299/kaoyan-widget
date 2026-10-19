@@ -18,6 +18,8 @@ public class Bridge {
     @JavascriptInterface public void pickWords() { a.runOnUiThread(new PickTask(a)); }
     @JavascriptInterface public void resetWords() { a.runOnUiThread(new ResetTask(a)); }
     @JavascriptInterface public void openSetup() { a.runOnUiThread(new SetupTask(a)); }
+    /** Dock 的「今日单词」：从设置页回到主页。 */
+    @JavascriptInterface public void openHome() { a.runOnUiThread(new HomeTask(a)); }
     @JavascriptInterface public void setPushTime(String s, String e) { a.runOnUiThread(new PushTimeTask(a, s, e)); }
     @JavascriptInterface public void toggleDanmaku() { a.runOnUiThread(new DanmakuToggleTask(a)); }
     @JavascriptInterface public void requestOverlay() { a.runOnUiThread(new OverlayTask(a)); }
@@ -98,6 +100,12 @@ public class Bridge {
         Activity a;
         SetupTask(Activity a) { this.a = a; }
         public void run() { HtmlView.FORCE_SETUP = true; ((MainActivity) a).load(); }
+    }
+
+    static class HomeTask implements Runnable {
+        Activity a;
+        HomeTask(Activity a) { this.a = a; }
+        public void run() { HtmlView.FORCE_SETUP = false; ((MainActivity) a).load(); }
     }
 
     /** 保存每日推送时段，并按新时段重排今天剩余批次。 */

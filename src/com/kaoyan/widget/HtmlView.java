@@ -70,17 +70,7 @@ public class HtmlView {
         h.append(".tag.rev{background:#e08a3c}");
         h.append(".en{font-weight:700}.ph{color:#9a8fb5;font-size:13px}");
         h.append(".cn{color:#4a4066}");
-        h.append("#topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:8px 12px;margin:-16px -16px 12px;background:rgba(250,247,255,.95);border-bottom:1px solid #efeaf8}");
-        h.append("#menuBtn{width:38px;height:38px;border:none;border-radius:10px;background:#8b6fd6;color:#fff;font-size:18px;cursor:pointer}");
-        h.append("#barTitle{font-weight:700;font-size:16px}");
-        h.append("#scrim{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(40,30,60,.38);opacity:0;visibility:hidden;transition:.25s;z-index:30}");
-        h.append("#scrim.open{opacity:1;visibility:visible}");
-        h.append("#drawer{position:fixed;top:0;left:0;height:100%;width:250px;max-width:78%;background:#fff;z-index:40;transform:translateX(-105%);transition:transform .28s;box-shadow:4px 0 24px rgba(80,60,140,.18);padding:18px 14px;box-sizing:border-box;display:flex;flex-direction:column}");
-        h.append("#drawer.open{transform:translateX(0)}");
-        h.append(".drawer-head{font-size:16px;font-weight:700;margin:4px 6px 14px}");
-        h.append(".mi{display:block;padding:12px;border-radius:10px;font-size:15px;cursor:pointer;color:#3a3352}");
-        h.append(".mi:active{background:#f1ecfb}");
-        h.append(".drawer-foot{margin-top:auto;font-size:12px;color:#9a8fb5;line-height:1.8;padding:10px 6px;border-top:1px dashed #eee}");
+        appendDockCss(h);
         h.append("html.dk{color-scheme:dark}");
         h.append("html.dk body{background:#151221;color:#e7e3f5}");
         h.append("html.dk p.sub{color:#a99fc4}");
@@ -90,29 +80,14 @@ public class HtmlView {
         h.append("html.dk .en{color:#fff}");
         h.append("html.dk .ph{color:#9a8fb5}");
         h.append("html.dk .cn{color:#d6d0e8}");
-        h.append("html.dk #topbar{background:rgba(21,18,33,.95);border-bottom-color:#2a2440}");
-        h.append("html.dk #drawer{background:#1d1830;box-shadow:4px 0 24px rgba(0,0,0,.55)}");
-        h.append("html.dk .mi{color:#ded8f0}");
-        h.append("html.dk .mi:active{background:#2a2440}");
-        h.append("html.dk .drawer-foot{border-top-color:#2a2440;color:#8f86a8}");
         h.append("</style></head><body>");
-        h.append("<div id='topbar'><button id='menuBtn'>&#9776;</button><span id='barTitle'>考研单词</span></div>");
-        h.append("<div id='scrim'></div>");
-        h.append("<nav id='drawer'><div class='drawer-head'>菜单</div>");
-        h.append("<a class='mi' onclick='goTop()'>🏠 今日单词</a>");
-        h.append("<a class='mi' onclick='App.pushNow()'>⚡ 立即推送一批</a>");
-        h.append("<a class='mi' onclick='App.reload()'>🔄 刷新数据</a>");
-        h.append("<a class='mi' onclick='App.openSetup()'>⚙️ 设置 / 换词库</a>");
-        h.append("<a class='mi' onclick='goTop()'>⬆️ 回到顶部</a>");
-        h.append("<div class='drawer-foot'>推送 ").append(win).append("<br>初试 ").append(esc(exam)).append("（剩 ").append(dl).append(" 天）<br>每日新学 ").append(per).append(" · 复习 ≤ ").append(rev).append("</div></nav>");
-        h.append("<script>");
-        h.append("function toggleMenu(o){var d=document.getElementById('drawer'),s=document.getElementById('scrim');if(o===undefined)o=!d.classList.contains('open');if(o){d.classList.add('open');s.classList.add('open');}else{d.classList.remove('open');s.classList.remove('open');}}");
-        h.append("function goTop(){window.scrollTo(0,0);toggleMenu(false);}");
-        h.append("window.onload=function(){var mb=document.getElementById('menuBtn');if(mb)mb.onclick=function(){toggleMenu();};var sc=document.getElementById('scrim');if(sc)sc.onclick=function(){toggleMenu(false);};};");
-        h.append("</script>");
         h.append("<h1>今日单词</h1>");
-        h.append("<p class='sub'>更新 ").append(Engine.nowTs())
+        h.append("<p class='sub' style='margin-bottom:6px'>更新 ").append(Engine.nowTs())
          .append(" ｜ 共 ").append(todays.size()).append(" 批 / ").append(total).append(" 词</p>");
+        // 原侧边栏底部那几行信息（推送时段 / 初试倒计时 / 每日词量），侧边栏去掉后挪到页头
+        h.append("<p class='sub'>推送 ").append(win)
+         .append(" ｜ 初试 ").append(esc(exam)).append("（剩 ").append(dl).append(" 天）")
+         .append("<br>每日新学 ").append(per).append(" · 复习 ≤ ").append(rev).append("</p>");
         for (JSONObject r : todays) {
             h.append("<div class='batch'><div class='bt'>").append(esc(r.optString("ts", "")))
              .append(" ｜ ").append(esc(r.optString("title", ""))).append("</div>");
@@ -140,6 +115,10 @@ public class HtmlView {
             }
             h.append("</div>");
         }
+        h.append(dockBar(false));
+        h.append("<script>");
+        appendScrollJs(h);
+        h.append("</script>");
         h.append("</body></html>");
         return h.toString();
     }
@@ -202,6 +181,7 @@ public class HtmlView {
         h.append("html.dk .sval{color:#cfc6e8}");
         h.append("html.dk .ticks{color:#6f6690}");
         h.append("html.dk .ticks .on{color:#b9a4ec}");
+        appendDockCss(h);
         h.append("</style></head><body>");
         h.append("<h1>欢迎使用 · 考研单词</h1>");
         h.append("<p class='sub'>首次使用请设置初试日期，系统会按剩余天数和词库总量，自动推算每日需要新学的单词数量。</p>");
@@ -247,6 +227,12 @@ public class HtmlView {
         h.append("<button class='btn2' onclick='saveDm()'>保存弹幕设置</button>");
         h.append("<input type='hidden' id='dfont' value='").append(dFont).append("'>");
         h.append("<input type='hidden' id='dbold' value='").append(dBold).append("'></div>");
+        // 原侧边栏里的两个动作项，现在挂在「设置」页
+        h.append("<div class='card'><div class='ct'>快捷操作</div>");
+        h.append("<div class='wc'>「立即推送一批」会立刻发通知，并把这一批词以弹幕划过。</div>");
+        h.append("<button class='btn2' onclick='App.pushNow()'>⚡ 立即推送一批</button>");
+        h.append("<button class='btn2' onclick='App.reload()'>🔄 刷新数据</button></div>");
+        h.append(dockBar(true));
         h.append("<script>");
         h.append("var WC=").append(wc).append(";");
         h.append("function calc(){var ex=document.getElementById('exam');var v=ex.value;var c=document.getElementById('calc');");
@@ -270,6 +256,7 @@ public class HtmlView {
         h.append("if(ts&&ts.children){for(var j=0;j<ts.children.length;j++){ts.children[j].className=(j===i?'on':'');}}}");
         h.append("function saveDm(){var a=document.getElementById('dron').value;var b=document.getElementById('droff').value;var s=document.getElementById('dsize').value;var c=document.getElementById('dcolor').value;var f=document.getElementById('dfont').value;var bd=document.getElementById('dbold').value;App.setDanmakuCfg(a,b,s,c,f,bd);alert('已保存弹幕设置');}");
         h.append("calc();");
+        appendScrollJs(h);
         h.append("</script>");
         h.append("</body></html>");
         return h.toString();
@@ -282,6 +269,66 @@ public class HtmlView {
                     & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
             return m == android.content.res.Configuration.UI_MODE_NIGHT_YES;
         } catch (Exception e) { return false; }
+    }
+
+    /**
+     * 底部 Dock（今日单词 / 设置）与「回到顶部」按钮的样式，两个页面共用。
+     * 原侧边栏（topbar + scrim + drawer）已整体移除。
+     */
+    static void appendDockCss(StringBuilder h) {
+        h.append("body{padding-bottom:80px}");
+        h.append("#dock{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;");
+        h.append("background:rgba(255,255,255,.97);border-top:1px solid #efeaf8;");
+        h.append("box-shadow:0 -2px 12px rgba(120,90,200,.07);padding-bottom:env(safe-area-inset-bottom,0px)}");
+        h.append(".di{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;");
+        h.append("gap:2px;height:58px;font-size:11px;color:#8a7fa8;cursor:pointer;");
+        h.append("-webkit-tap-highlight-color:transparent;user-select:none}");
+        h.append(".di .ico{font-size:19px;line-height:1}");
+        h.append(".di.active{color:#7a5cc0;font-weight:700}");
+        h.append(".di:active{background:#f1ecfb}");
+        h.append("#toTop{position:fixed;right:14px;bottom:76px;z-index:41;width:44px;height:44px;");
+        h.append("border-radius:50%;background:#8b6fd6;color:#fff;font-size:20px;line-height:44px;");
+        h.append("text-align:center;box-shadow:0 3px 10px rgba(120,90,200,.35);display:none;cursor:pointer}");
+        h.append("html.dk #dock{background:rgba(29,24,48,.97);border-top-color:#2a2440}");
+        h.append("html.dk .di{color:#a99fc4}");
+        h.append("html.dk .di.active{color:#b9a4ec}");
+        h.append("html.dk .di:active{background:#2a2440}");
+    }
+
+    /**
+     * Dock 栏 + 「回到顶部」按钮。
+     * @param setupActive true 表示当前在设置页（此时「设置」高亮，「今日单词」回主页）
+     */
+    static String dockBar(boolean setupActive) {
+        StringBuilder b = new StringBuilder();
+        b.append("<div id='toTop' onclick='goTop()'>&#8593;</div>");
+        b.append("<nav id='dock'>");
+        if (setupActive) {
+            b.append("<a class='di' role='button' onclick='App.openHome()'><span class='ico'>&#127968;</span><span>今日单词</span></a>");
+            b.append("<a class='di active' role='button' aria-current='page'><span class='ico'>&#9881;</span><span>设置</span></a>");
+        } else {
+            b.append("<a class='di active' role='button' aria-current='page' onclick='goTop()'><span class='ico'>&#127968;</span><span>今日单词</span></a>");
+            b.append("<a class='di' role='button' onclick='App.openSetup()'><span class='ico'>&#9881;</span><span>设置</span></a>");
+        }
+        b.append("</nav>");
+        return b.toString();
+    }
+
+    /**
+     * 回到顶部按钮的滚动逻辑：**只在不在顶部时显示**（SCROLL_MIN 以下视为顶部）。
+     * 两个页面共用。
+     */
+    static void appendScrollJs(StringBuilder h) {
+        h.append("function goTop(){window.scrollTo({top:0,behavior:'smooth'});}");
+        // 滚动位置：不同 WebView 版本下 scrollY / pageYOffset / documentElement 各有取值，
+        // 取第一个非 0 的（都为 0 就是真在顶部）
+        h.append("function curY(){return window.pageYOffset||window.scrollY");
+        h.append("||document.documentElement.scrollTop||document.body.scrollTop||0;}");
+        h.append("function updateTop(){var b=document.getElementById('toTop');if(!b)return;");
+        h.append("b.style.display=(curY()>8)?'inline-block':'none';}");
+        h.append("window.addEventListener('scroll',updateTop);");
+        h.append("window.addEventListener('load',updateTop);");
+        h.append("updateTop();");
     }
 
     /** 弹出频率的档位（个/秒）。0 = 不弹。滑条按这个表分档。 */
