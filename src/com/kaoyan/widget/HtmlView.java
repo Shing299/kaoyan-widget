@@ -49,11 +49,7 @@ public class HtmlView {
             if (l != null) total += l.length();
         }
 
-        int wc = Words.load(ctx).size();
-        int per = Engine.dailyNew(st, wc, today);
-        int rev = Engine.reviewCap(st, per);
         int dl = Engine.daysLeft(st, today);
-        String win = Engine.fmtHM(Engine.pushStartMin(st)) + "–" + Engine.fmtHM(Engine.pushEndMin(st));
 
         StringBuilder h = new StringBuilder();
         h.append("<!doctype html><html").append(isDark(ctx) ? " class='dk'" : "").append("><head><meta charset='utf-8'>");
@@ -61,6 +57,10 @@ public class HtmlView {
         h.append("<title>考研单词·今日</title><style>");
         h.append("body{font-family:-apple-system,'Noto Sans SC',sans-serif;margin:0;padding:16px;background:#faf7ff;color:#2b2340}");
         h.append("h1{font-size:20px;margin:0 0 4px}");
+        h.append(".hrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 4px}");
+        h.append(".hrow h1{margin:0}");
+        h.append(".cd{flex:0 0 auto;font-style:italic;font-size:13px;color:#9a8fb5}");
+        h.append("html.dk .cd{color:#a99fc4}");
         h.append("p.sub{color:#8a7fa8;font-size:13px;margin:0 0 16px}");
         h.append(".batch{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(120,90,200,.08)}");
         h.append(".bt{font-size:13px;color:#7a5cc0;font-weight:600;margin-bottom:6px}");
@@ -81,13 +81,11 @@ public class HtmlView {
         h.append("html.dk .ph{color:#9a8fb5}");
         h.append("html.dk .cn{color:#d6d0e8}");
         h.append("</style></head><body>");
-        h.append("<h1>今日单词</h1>");
-        h.append("<p class='sub' style='margin-bottom:6px'>更新 ").append(Engine.nowTs())
+        // 标题行：左边「今日单词」，最右侧用斜体显示初试倒计时
+        h.append("<div class='hrow'><h1>今日单词</h1><span class='cd'>初试 剩 ")
+         .append(dl).append(" 天</span></div>");
+        h.append("<p class='sub'>更新 ").append(Engine.nowTs())
          .append(" ｜ 共 ").append(todays.size()).append(" 批 / ").append(total).append(" 词</p>");
-        // 原侧边栏底部那几行信息（推送时段 / 初试倒计时 / 每日词量），侧边栏去掉后挪到页头
-        h.append("<p class='sub'>推送 ").append(win)
-         .append(" ｜ 初试 ").append(esc(exam)).append("（剩 ").append(dl).append(" 天）")
-         .append("<br>每日新学 ").append(per).append(" · 复习 ≤ ").append(rev).append("</p>");
         for (JSONObject r : todays) {
             h.append("<div class='batch'><div class='bt'>").append(esc(r.optString("ts", "")))
              .append(" ｜ ").append(esc(r.optString("title", ""))).append("</div>");
