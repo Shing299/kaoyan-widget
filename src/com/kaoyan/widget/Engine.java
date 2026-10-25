@@ -122,6 +122,8 @@ public class Engine {
             if (!st.has("danmaku_color")) st.put("danmaku_color", "#FFFFFF");
             if (!st.has("danmaku_font")) st.put("danmaku_font", "sans");
             if (!st.has("danmaku_bold")) st.put("danmaku_bold", "1");
+            // v1.3.1：开屏动画「今天弹过了没有」的日期（yyyy-MM-dd）
+            if (!st.has("splash_day")) st.put("splash_day", "");
         } catch (Exception e) { }
         return st;
     }

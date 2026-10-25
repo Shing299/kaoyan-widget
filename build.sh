@@ -18,6 +18,15 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 ANDROID_JAR="${ANDROID_JAR:-$HOME/sdk/ex/android-34/android.jar}"
+# aapt2 link 需要带资源表（resources.arsc）的框架包；有些环境只有「纯 class」的 android.jar，
+# 直接拿来 link 会报 Theme.Material.Light.NoActionBar not found。检测不到资源表就回退到系统框架包。
+AAPT_I="${AAPT_I:-$ANDROID_JAR}"
+if [ -f "$AAPT_I" ] && ! python3 -c "import zipfile,sys;sys.exit(0 if 'resources.arsc' in zipfile.ZipFile(sys.argv[1]).namelist() else 1)" "$AAPT_I" 2>/dev/null; then
+  if [ -f /system/framework/framework-res.apk ]; then
+    AAPT_I=/system/framework/framework-res.apk
+    echo "  [framework] android.jar 无资源表，aapt2 link 改用 $AAPT_I"
+  fi
+fi
 KS="${KS:-keystore.jks}"
 KS_PASS="${KS_PASS:-changeit}"
 KEY_PASS="${KEY_PASS:-$KS_PASS}"
@@ -57,7 +66,7 @@ echo "--- aapt2 compile ---"
 aapt2 compile --dir "$HERE/res" -o "$OUT/res.zip" || exit 2
 
 echo "--- aapt2 link ---"
-aapt2 link -A "$HERE/assets" -o "$OUT/base.apk" -I "$ANDROID_JAR" \
+aapt2 link -A "$HERE/assets" -o "$OUT/base.apk" -I "$AAPT_I" \
   --manifest "$HERE/AndroidManifest.xml" --java "$OUT/gen" \
   --min-sdk-version 26 --target-sdk-version 34 "$OUT/res.zip" || exit 3
 

@@ -6,11 +6,14 @@ import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import org.json.JSONObject;
 
 public class MainActivity extends Activity {
     private WebView web;
     private boolean showingSetup = false;
     private boolean examSet = false;
+    /** 本次启动是否要显示「每日首次打开」的开屏动画。 */
+    private boolean splashPending = false;
     static final int REQ_WORDS = 1001;
 
     @Override
@@ -24,6 +27,7 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient());
         web.addJavascriptInterface(new Bridge(this), "App");
         setContentView(web);
+        splashPending = shouldShowSplash();
         load();
         // 启动唯一的前台服务（推送调度 + 学习弹幕）并确保调度
         BotService.sync(this);
@@ -44,6 +48,7 @@ public class MainActivity extends Activity {
     void load() {
         try {
             examSet = Store.loadState(this).optString("exam", "").length() >= 10;
+            HtmlView.SPLASH = splashPending;
             String html = HtmlView.build(this);
             showingSetup = HtmlView.FORCE_SETUP || !examSet;
             web.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
@@ -92,7 +97,29 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         load();
+        // 开屏动画只属于「本次启动的第一次进入」：onCreate 那次 load 会被紧跟的
+        // onResume 覆盖，真正显示出来的是这一次；之后刷新页面不再弹。
+        splashPending = false;
         syncService();
+    }
+
+    /**
+     * 每日首次打开：今天还没弹过开屏动画就弹，并立刻把日期记进 state.json。
+     * （先记日期再显示：即使动画没播完 App 就被杀掉，今天也不会反复弹。）
+     */
+    boolean shouldShowSplash() {
+        try {
+            JSONObject st = Store.loadState(this);
+            Engine.ensureState(st);
+            if (st.optString("exam", "").length() < 10) return false;
+            String today = Engine.today();
+            if (today.equals(st.optString("splash_day", ""))) return false;
+            st.put("splash_day", today);
+            Store.saveState(this, st);
+            return true;
+        } catch (Throwable e) {
+            return false;
+        }
     }
 
     /** 确保前台服务在跑（推送调度与弹幕都由它负责）。 */

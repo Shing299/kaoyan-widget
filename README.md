@@ -15,6 +15,7 @@
 
 最新版本见 [Releases](https://github.com/shing299/kaoyan-widget/releases)：
 
+- **v1.3.1**：[kaoyan-widget-v1.3.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3.1/kaoyan-widget-v1.3.1.apk)
 - **v1.3**：[kaoyan-widget-v1.3.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3/kaoyan-widget-v1.3.apk)
 - **v1.2.1**：[kaoyan-widget-v1.2.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2.1/kaoyan-widget-v1.2.1.apk)
 - **v1.2**：[kaoyan-widget-v1.2.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2/kaoyan-widget-v1.2.apk)
@@ -22,19 +23,21 @@
 
 ```bash
 # 安装 / 覆盖升级
-pm install -r -d kaoyan-widget-v1.3.apk
+pm install -r -d kaoyan-widget-v1.3.1.apk
 ```
 
 ## 📸 截图
 
-| 权限引导（首次启动） | 主界面 · 今日单词 | 设置 |
-| :---: | :---: | :---: |
-| ![权限引导](docs/screenshot-permission.png) | ![主界面](docs/screenshot-main.png) | ![设置](docs/screenshot-settings.png) |
+| 开屏提醒（每日首次打开） | 权限引导（首次启动） | 主界面 · 今日单词 | 设置 |
+| :---: | :---: | :---: | :---: |
+| ![开屏提醒](docs/screenshot-splash.png) | ![权限引导](docs/screenshot-permission.png) | ![主界面](docs/screenshot-main.png) | ![设置](docs/screenshot-settings.png) |
 
 > 截图为实机运行效果（OnePlus / ColorOS）。首次启动会申请通知权限，并弹窗引导开启自启动、关闭电池优化。
 
 ## ✨ 功能特性
 
+- **每日开屏提醒（v1.3.1）**：每天第一次打开 App 时全屏弹一次「距离初试还剩 N 天」动画
+  （数字滚动 + 当天随机 2 个单词），2 秒自动淡出，点任意处或右上角 `×` 可立即关闭；每天只弹一次。
 - **首次启动设置向导**：第一次打开时引导设置初试日期，未设置前不会推送到通知。
 - **初试日期可配置**：默认 `2027-12-20`，可在 App 内随时修改。
 - **按剩余天数自动倒推每日词量**：
@@ -75,6 +78,7 @@ kaoyan-widget/
 └─ src/com/kaoyan/widget/
    ├─ MainActivity.java         # App 主界面入口
    ├─ HtmlView.java             # 基于 WebView 的界面与设置向导
+   ├─ SplashView.java           # 每日开屏提醒（倒计时 + 随机词，纯 Java 拼 HTML）
    ├─ Bridge.java               # JS 与原生交互桥（定时任务用命名静态内部类）
    ├─ Engine.java               # 学习计划推算核心（天数/每日词量/复习上限）
    ├─ Words.java                # 词库加载（内置 / 自定义）
@@ -95,6 +99,10 @@ kaoyan-widget/
 以及 Android SDK 的 `android.jar`；Python3 用于把 `classes.dex` 注入 APK。
 
 > 注意：需使用本机 OS 的 **shell 内置 `>>`** 读取 heredoc；`d8` 建议使用不针对匿名内部类报错的版本（本项目源码已避免使用匿名内部类）。
+
+> 若 `ANDROID_JAR` 是**只有 class、没有资源表**的 `android.jar`（例如 App 自带的 `$HOME/android.jar`），
+> `aapt2 link` 会报 `Theme.Material.Light.NoActionBar not found`。`build.sh` 会自动检测并改用
+> `/system/framework/framework-res.apk` 做资源链接（可用 `AAPT_I` 手动指定）。
 
 ```bash
 # 1) 指定 android.jar 与你的签名密钥（密钥请自行生成，勿提交到仓库）
@@ -126,6 +134,14 @@ pm install -r -d out/app.apk
 
 ## 🗓 更新日志
 
+- **v1.3.1**
+  - **每日开屏提醒**：每天第一次打开 App 时全屏弹一次开屏动画 —— 紫渐变背景上
+    「距离初试」大数字从 0 滚到实际天数，再按阶段给一句鼓励语；同时从**当天要学的词里随机挑 2 个**
+    展示「单词 / 音标 / 释义」。
+  - **2 秒后自动淡出**，点屏幕任意处或右上角 `×` 可立即关闭；一天只弹一次（`state.json` 的 `splash_day`），
+    第二天自动恢复，首次设置日期前不弹；深色模式单独配色，读屏可识别为对话框。
+  - 每天第一次打开顺便记两个词，比纯倒计时多一点用处；
+  - 每次想更新日志怎么写总是头疼，于是看了看国民级的软件：**修复了一些已知问题。**
 - **v1.3**
   - **侧边栏改为底部 Dock**：原来左侧抽屉的 5 个菜单项拆成 Dock 的两项 ——
     「今日单词」（回主页 / 回顶部）和「设置」。

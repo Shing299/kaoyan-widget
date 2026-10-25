@@ -12,12 +12,16 @@ public class HtmlView {
     /** 由侧边栏「设置」触发，强制显示设置页。 */
     public static boolean FORCE_SETUP = false;
 
+    /** 本次页面加载是否显示「每日首次打开」的开屏动画（由 MainActivity 在 load 前设置）。 */
+    public static boolean SPLASH = false;
+
     public static String build(Context ctx) {
         JSONObject st = Store.loadState(ctx);
         Engine.ensureState(st);
         String exam = st.optString("exam", "");
         String today = Engine.today();
         if (FORCE_SETUP || exam.length() < 10) return setupPage(ctx, exam, today);
+        boolean splash = SPLASH;
 
         JSONArray all = Store.readHistory(ctx, 0);
         List<JSONObject> todays = new ArrayList<JSONObject>();
@@ -87,8 +91,13 @@ public class HtmlView {
         h.append("<p class='sub'>更新 ").append(Engine.nowTs())
          .append(" ｜ 共 ").append(todays.size()).append(" 批 / ").append(total).append(" 词</p>");
         for (JSONObject r : todays) {
+            // 批次标题：历史数据里存的是「考研单词 D25 120/170」，
+            // 列表卡片头去掉「考研单词」四个字（v1.3.1 用户要求，见 2026-10-25 截图圈注）
+            String bt = r.optString("title", "");
+            if (bt.startsWith("考研单词 ")) bt = bt.substring("考研单词 ".length());
+            else if (bt.startsWith("考研单词")) bt = bt.substring("考研单词".length()).trim();
             h.append("<div class='batch'><div class='bt'>").append(esc(r.optString("ts", "")))
-             .append(" ｜ ").append(esc(r.optString("title", ""))).append("</div>");
+             .append(" ｜ ").append(esc(bt)).append("</div>");
             JSONArray lines = r.optJSONArray("lines");
             if (lines != null) for (int i = 0; i < lines.length(); i++) {
                 String ln = lines.optString(i, "");
@@ -114,11 +123,56 @@ public class HtmlView {
             h.append("</div>");
         }
         h.append(dockBar(false));
+        // 每日首次打开：开屏动画（距初试天数 + 今日随机 2 个单词）
+        if (splash) h.append(SplashView.build(dl, pickSplashWords(ctx, st, today), isDark(ctx)));
         h.append("<script>");
         appendScrollJs(h);
         h.append("</script>");
         h.append("</body></html>");
         return h.toString();
+    }
+
+    /**
+     * 开屏动画用：从「今日单词清单」（当天的 plan）里随机抽 2 个词。
+     * 若今天还没生成计划，就先按与推送相同的逻辑生成一份
+     * （只在「当天还没有计划」时才会重排，plan_pos 归零不影响当天进度）。
+     */
+    static String[][] pickSplashWords(Context ctx, JSONObject st, String today) {
+        try {
+            List<Words.W> all = Words.load(ctx);
+            if (all.isEmpty()) return null;
+            if (!today.equals(st.optString("day", ""))) {
+                Engine.buildPlan(st, all.size(), today);
+                Store.saveState(ctx, st);
+            }
+            JSONArray plan = st.optJSONArray("plan");
+            if (plan == null || plan.length() == 0) return null;
+            List<Integer> idx = new ArrayList<Integer>();
+            for (int i = 0; i < plan.length(); i++) {
+                JSONArray it = plan.optJSONArray(i);
+                if (it == null || it.length() == 0) continue;
+                int w = it.optInt(0, -1);
+                if (w >= 0 && w < all.size()) idx.add(w);
+            }
+            if (idx.isEmpty()) return null;
+            // Fisher–Yates 洗牌后取前两个（每次打开都不一样）
+            java.util.Random r = new java.util.Random();
+            for (int i = idx.size() - 1; i > 0; i--) {
+                int j = r.nextInt(i + 1);
+                Integer t = idx.get(i);
+                idx.set(i, idx.get(j));
+                idx.set(j, t);
+            }
+            int n = Math.min(2, idx.size());
+            String[][] out = new String[n][];
+            for (int i = 0; i < n; i++) {
+                Words.W w = all.get(idx.get(i));
+                out[i] = new String[]{w.word, w.ph, w.mean};
+            }
+            return out;
+        } catch (Throwable e) {
+            return null;
+        }
     }
 
     /** 首次设置页：初试日期 + 词库管理。 */
