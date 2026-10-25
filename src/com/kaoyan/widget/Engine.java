@@ -124,6 +124,8 @@ public class Engine {
             if (!st.has("danmaku_bold")) st.put("danmaku_bold", "1");
             // v1.3.1：开屏动画「今天弹过了没有」的日期（yyyy-MM-dd）
             if (!st.has("splash_day")) st.put("splash_day", "");
+            // v1.3.2：今日单词列表显示模式 both / en / cn（默认双语）
+            if (!st.has("view_mode")) st.put("view_mode", "both");
         } catch (Exception e) { }
         return st;
     }

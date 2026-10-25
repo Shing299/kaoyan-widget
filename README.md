@@ -15,6 +15,7 @@
 
 最新版本见 [Releases](https://github.com/shing299/kaoyan-widget/releases)：
 
+- **v1.3.2**：[kaoyan-widget-v1.3.2.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3.2/kaoyan-widget-v1.3.2.apk)
 - **v1.3.1**：[kaoyan-widget-v1.3.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3.1/kaoyan-widget-v1.3.1.apk)
 - **v1.3**：[kaoyan-widget-v1.3.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3/kaoyan-widget-v1.3.apk)
 - **v1.2.1**：[kaoyan-widget-v1.2.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.2.1/kaoyan-widget-v1.2.1.apk)
@@ -23,19 +24,24 @@
 
 ```bash
 # 安装 / 覆盖升级
-pm install -r -d kaoyan-widget-v1.3.1.apk
+pm install -r -d kaoyan-widget-v1.3.2.apk
 ```
 
 ## 📸 截图
 
-| 开屏提醒（每日首次打开） | 权限引导（首次启动） | 主界面 · 今日单词 | 设置 |
-| :---: | :---: | :---: | :---: |
-| ![开屏提醒](docs/screenshot-splash.png) | ![权限引导](docs/screenshot-permission.png) | ![主界面](docs/screenshot-main.png) | ![设置](docs/screenshot-settings.png) |
+| 开屏提醒（每日首次打开） | 权限引导（首次启动） | 主界面 · 今日单词 | 仅英文（自测模式） | 设置 |
+| :---: | :---: | :---: | :---: | :---: |
+| ![开屏提醒](docs/screenshot-splash.png) | ![权限引导](docs/screenshot-permission.png) | ![主界面](docs/screenshot-main.png) | ![仅英文](docs/screenshot-viewmode.png) | ![设置](docs/screenshot-settings.png) |
 
 > 截图为实机运行效果（OnePlus / ColorOS）。首次启动会申请通知权限，并弹窗引导开启自启动、关闭电池优化。
 
 ## ✨ 功能特性
 
+- **单词显示模式切换（v1.3.2）**：主页「回到顶部」圆钮正上方多了一个**只写一个字**的小圆钮，**尺寸与「回到顶部」一致（44×44）**，
+  点一下在 **双语 → 仅英文 → 仅中文 → 双语** 之间循环（圆钮上的字同步变成「双」/「英」/「中」）。
+  切到「仅英文」只留单词 + 音标、藏掉释义；切到「仅中文」只留释义（音标一起藏）—— 合上中文就能自测默写。
+  切换**只影响「今日单词」页面**：通知推送、学习弹幕、桌面小组件照旧显示中英双语；
+  选择写进 state.json 的 view_mode，下次打开 App 仍是上次那档。
 - **每日开屏提醒（v1.3.1）**：每天第一次打开 App 时全屏弹一次「距离初试还剩 N 天」动画
   （数字滚动 + 当天随机 2 个单词），2 秒自动淡出，点任意处或右上角 `×` 可立即关闭；每天只弹一次。
 - **首次启动设置向导**：第一次打开时引导设置初试日期，未设置前不会推送到通知。
@@ -134,6 +140,12 @@ pm install -r -d out/app.apk
 
 ## 🗓 更新日志
 
+- **v1.3.2**
+  - **单词显示模式切换**：主页「回到顶部」正上方新增一个只写一个字的圆钮 —— **尺寸与「回到顶部」一致（44×44）**，
+    点一下在 **双语 → 仅英文 → 仅中文 → 双语** 之间循环，圆钮文字同步变「双」/「英」/「中」。
+  - 仅英文只留「单词[音标]」，仅中文只留释义（音标一起藏）：合上中文就能自测默写。
+  - 切换即时生效（不重载页面），**只影响「今日单词」页面**：通知推送、学习弹幕、桌面小组件照旧双语；
+    选择存进 state.json 的 view_mode，重开 App 仍是上次那档。
 - **v1.3.1**
   - **每日开屏提醒**：每天第一次打开 App 时全屏弹一次开屏动画 —— 紫渐变背景上
     「距离初试」大数字从 0 滚到实际天数，再按阶段给一句鼓励语；同时从**当天要学的词里随机挑 2 个**

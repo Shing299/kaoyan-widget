@@ -24,6 +24,8 @@ public class Bridge {
     @JavascriptInterface public void toggleDanmaku() { a.runOnUiThread(new DanmakuToggleTask(a)); }
     @JavascriptInterface public void requestOverlay() { a.runOnUiThread(new OverlayTask(a)); }
     @JavascriptInterface public void setDanmakuCfg(String on, String off, String size, String color, String font, String bold) { a.runOnUiThread(new DanmakuCfgTask(a, on, off, size, color, font, bold)); }
+    /** v1.3.2：记录「今日单词」显示模式（both / en / cn）。前端已即时切换，这里只负责落盘。 */
+    @JavascriptInterface public void setViewMode(String m) { a.runOnUiThread(new ViewModeTask(a, m)); }
 
     static void doPush(Context ctx) {
         try {
@@ -160,6 +162,17 @@ public class Bridge {
         } catch (Throwable t) { }
     }
 
+    /** v1.3.2：显示模式只影响「今日单词」列表；通知 / 弹幕 / 小组件都不读这个字段。 */
+    static void doSetViewMode(Context ctx, String m) {
+        try {
+            String v = "en".equals(m) ? "en" : ("cn".equals(m) ? "cn" : "both");
+            JSONObject st = Store.loadState(ctx);
+            Engine.ensureState(st);
+            st.put("view_mode", v);
+            Store.saveState(ctx, st);
+        } catch (Throwable t) { }
+    }
+
     /** 解析字号（sp）：8–80。 */
     static int parseSize(String s, int def) {
         try {
@@ -213,5 +226,12 @@ public class Bridge {
             this.color = color; this.font = font; this.bold = bold;
         }
         public void run() { doSetDanmakuCfg(a, on, off, size, color, font, bold); ((MainActivity) a).load(); }
+    }
+
+    /** v1.3.2：保存显示模式。故意不 load()，避免点一下圆钮整页闪一下。 */
+    static class ViewModeTask implements Runnable {
+        Activity a; String m;
+        ViewModeTask(Activity a, String m) { this.a = a; this.m = m; }
+        public void run() { doSetViewMode(a, m); }
     }
 }

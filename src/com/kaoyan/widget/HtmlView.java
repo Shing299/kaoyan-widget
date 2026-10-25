@@ -54,9 +54,14 @@ public class HtmlView {
         }
 
         int dl = Engine.daysLeft(st, today);
+        // v1.3.2：单词列表的显示模式（both=中英双语 / en=仅英文 / cn=仅中文），默认双语
+        String vm = viewMode(st);
 
         StringBuilder h = new StringBuilder();
-        h.append("<!doctype html><html").append(isDark(ctx) ? " class='dk'" : "").append("><head><meta charset='utf-8'>");
+        h.append("<!doctype html><html");
+        String htmlCls = (isDark(ctx) ? "dk " : "") + ("both".equals(vm) ? "" : "vm-" + vm);
+        if (htmlCls.trim().length() > 0) h.append(" class='").append(htmlCls.trim()).append("'");
+        h.append("><head><meta charset='utf-8'>");
         h.append("<meta name='viewport' content='width=device-width,initial-scale=1'>");
         h.append("<title>考研单词·今日</title><style>");
         h.append("body{font-family:-apple-system,'Noto Sans SC',sans-serif;margin:0;padding:16px;background:#faf7ff;color:#2b2340}");
@@ -74,6 +79,9 @@ public class HtmlView {
         h.append(".tag.rev{background:#e08a3c}");
         h.append(".en{font-weight:700}.ph{color:#9a8fb5;font-size:13px}");
         h.append(".cn{color:#4a4066}");
+        // 显示模式：仅英文时藏起中文释义；仅中文时连音标一起藏掉，只留中文
+        h.append("html.vm-en .cn{display:none}");
+        h.append("html.vm-cn .en,html.vm-cn .ph{display:none}");
         appendDockCss(h);
         h.append("html.dk{color-scheme:dark}");
         h.append("html.dk body{background:#151221;color:#e7e3f5}");
@@ -123,10 +131,13 @@ public class HtmlView {
             h.append("</div>");
         }
         h.append(dockBar(false));
+        // 「回到顶部」上方的显示模式圆钮（设置页没有单词列表，不插）
+        h.append(viewModeButton(vm));
         // 每日首次打开：开屏动画（距初试天数 + 今日随机 2 个单词）
         if (splash) h.append(SplashView.build(dl, pickSplashWords(ctx, st, today), isDark(ctx)));
         h.append("<script>");
         appendScrollJs(h);
+        appendViewModeJs(h);
         h.append("</script>");
         h.append("</body></html>");
         return h.toString();
@@ -342,6 +353,15 @@ public class HtmlView {
         h.append("#toTop{position:fixed;right:14px;bottom:76px;z-index:41;width:44px;height:44px;");
         h.append("border-radius:50%;background:#8b6fd6;color:#fff;font-size:20px;line-height:44px;");
         h.append("text-align:center;box-shadow:0 3px 10px rgba(120,90,200,.35);display:none;cursor:pointer}");
+        // v1.3.2：显示模式圆钮，叠在「回到顶部」正上方。只写一个字，尺寸与「回到顶部」一致（44×44）。
+        h.append("#vmBtn{position:fixed;right:14px;bottom:128px;z-index:41;width:44px;height:44px;");
+        h.append("padding:0;border-radius:50%;border:1px solid #d8ccf2;background:#fff;color:#7a5cc0;");
+        h.append("font-family:inherit;font-size:16px;font-weight:700;line-height:42px;text-align:center;");
+        h.append("box-shadow:0 2px 8px rgba(120,90,200,.22);cursor:pointer;outline:none;");
+        h.append("-webkit-appearance:none;-webkit-tap-highlight-color:transparent;user-select:none}");
+        h.append("#vmBtn:active{background:#f1ecfb}");
+        h.append("html.dk #vmBtn{background:#241d3b;color:#cfc6e8;border-color:#3a3157;box-shadow:none}");
+        h.append("html.dk #vmBtn:active{background:#2a2440}");
         h.append("html.dk #dock{background:rgba(29,24,48,.97);border-top-color:#2a2440}");
         h.append("html.dk .di{color:#a99fc4}");
         h.append("html.dk .di.active{color:#b9a4ec}");
@@ -365,6 +385,48 @@ public class HtmlView {
         }
         b.append("</nav>");
         return b.toString();
+    }
+
+    /** 显示模式：both = 中英双语（默认）/ en = 仅英文 / cn = 仅中文。 */
+    static String viewMode(JSONObject st) {
+        String v = st.optString("view_mode", "both");
+        return ("en".equals(v) || "cn".equals(v)) ? v : "both";
+    }
+
+    /** 圆钮上显示的那个字（只占一个字的位置）。 */
+    static String viewModeLabel(String vm) {
+        return "en".equals(vm) ? "英" : ("cn".equals(vm) ? "中" : "双");
+    }
+
+    /** 读屏 / 无障碍用的完整模式名。 */
+    static String viewModeName(String vm) {
+        return "en".equals(vm) ? "仅英文" : ("cn".equals(vm) ? "仅中文" : "双语");
+    }
+
+    /**
+     * 「回到顶部」按钮上方的显示模式圆钮（只在主页插入）。
+     * 点一下切一档：双语 → 仅英文 → 仅中文 → 双语；推送 / 通知 / 弹幕 / 小组件不受影响。
+     */
+    static String viewModeButton(String vm) {
+        return "<button type='button' id='vmBtn' data-vm='" + vm + "' aria-label='显示模式："
+            + viewModeName(vm) + "（点按切换）' onclick='vmNext()'>" + viewModeLabel(vm) + "</button>";
+    }
+
+    /**
+     * 显示模式切换脚本：只改 <html> 上的 vm-en / vm-cn 类（CSS 立刻生效，不重载页面），
+     * 同时通过 App.setViewMode() 写进 state.json，下次打开 / 切页后仍保持。
+     */
+    static void appendViewModeJs(StringBuilder h) {
+        h.append("var VM_SEQ=['both','en','cn'];");
+        h.append("var VM_TXT={both:'双',en:'英',cn:'中'};");
+        h.append("var VM_NAME={both:'双语',en:'仅英文',cn:'仅中文'};");
+        h.append("function vmNext(){var b=document.getElementById('vmBtn');if(!b)return;");
+        h.append("var cur=b.getAttribute('data-vm')||'both';var i=VM_SEQ.indexOf(cur);");
+        h.append("var nx=VM_SEQ[(i+1)%VM_SEQ.length];b.setAttribute('data-vm',nx);");
+        h.append("b.innerText=VM_TXT[nx];b.setAttribute('aria-label','显示模式：'+VM_NAME[nx]+'（点按切换）');");
+        h.append("var r=document.documentElement;r.classList.remove('vm-en','vm-cn');");
+        h.append("if(nx!=='both')r.classList.add('vm-'+nx);");
+        h.append("try{App.setViewMode(nx);}catch(e){}}");
     }
 
     /**
