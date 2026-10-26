@@ -15,6 +15,7 @@
 
 最新版本见 [Releases](https://github.com/shing299/kaoyan-widget/releases)：
 
+- **v1.3.2-repair**：[kaoyan-widget-v1.3.2-repair.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3.2-repair/kaoyan-widget-v1.3.2-repair.apk)
 - **v1.3.2**：[kaoyan-widget-v1.3.2.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3.2/kaoyan-widget-v1.3.2.apk)
 - **v1.3.1**：[kaoyan-widget-v1.3.1.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3.1/kaoyan-widget-v1.3.1.apk)
 - **v1.3**：[kaoyan-widget-v1.3.apk](https://github.com/Shing299/kaoyan-widget/releases/download/v1.3/kaoyan-widget-v1.3.apk)
@@ -24,7 +25,7 @@
 
 ```bash
 # 安装 / 覆盖升级
-pm install -r -d kaoyan-widget-v1.3.2.apk
+pm install -r -d kaoyan-widget-v1.3.2-repair.apk
 ```
 
 ## 📸 截图
@@ -140,6 +141,14 @@ pm install -r -d out/app.apk
 
 ## 🗓 更新日志
 
+- **v1.3.2-repair**
+  - **修复多音标词的中英文划分**（issue #1）：`pretend[priˈtend, priː-]` 这类给两个读音、音标里带空格的词，
+    原来按第一个空格切单词，正好切在音标中间 —— 单词带走半截音标、释义带走另一半，加粗范围和
+    「仅英文 / 仅中文」的隐藏全跟着串位。现在先按 `[` 定界、把音标整段吃到 `]` 再分释义。
+  - 内置词库里 553 条带空格音标的词全部修正；顺手修掉没有音标的词「单词+释义」粘在一起的问题
+    （`approximatea.近似的` → `approximate a.近似的`）。
+  - **老记录自动还原**：已经推出去的粘连行（history.jsonl 里的历史数据）在渲染时按当前词库反查还原，
+    不用等下一次推送、也不用清数据。
 - **v1.3.2**
   - **单词显示模式切换**：主页「回到顶部」正上方新增一个只写一个字的圆钮 —— **尺寸与「回到顶部」一致（44×44）**，
     点一下在 **双语 → 仅英文 → 仅中文 → 双语** 之间循环，圆钮文字同步变「双」/「英」/「中」。

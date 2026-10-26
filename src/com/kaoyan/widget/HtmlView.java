@@ -98,6 +98,8 @@ public class HtmlView {
          .append(dl).append(" 天</span></div>");
         h.append("<p class='sub'>更新 ").append(Engine.nowTs())
          .append(" ｜ 共 ").append(todays.size()).append(" 批 / ").append(total).append(" 词</p>");
+        // v1.3.3：老记录里「单词释义」粘连的行按词库反查还原用的词表（第一次用到才加载）
+        java.util.List<Words.W> glueDict = null;
         for (JSONObject r : todays) {
             // 批次标题：历史数据里存的是「考研单词 D25 120/170」，
             // 列表卡片头去掉「考研单词」四个字（v1.3.1 用户要求，见 2026-10-25 截图圈注）
@@ -112,16 +114,19 @@ public class HtmlView {
                 boolean isRev = ln.contains("[复]");
                 String body = ln.indexOf(' ') >= 0 ? ln.substring(ln.indexOf(' ') + 1) : ln;
                 body = body.replace("[复]", "").replace("[新]", "").trim();
-                String en, ph = "", cn;
-                int sp = 0, n = body.length();
-                while (sp < n && !Character.isWhitespace(body.charAt(sp))) sp++;
-                en = body.substring(0, sp);
-                String rest = (sp < n ? body.substring(sp) : "").trim();
-                if (rest.startsWith("[")) {
-                    int e = rest.indexOf(']');
-                    if (e > 0) { ph = rest.substring(1, e).trim(); rest = rest.substring(e + 1).trim(); }
+                // v1.3.3：音标本身可能带空格（pretend[prɪ'tend, priː-] 这种两个读音），
+                // 老实现直接按空白切单词，会切在音标中间 —— 单词带走半截音标、释义带走另一半，
+                // 加粗/隐藏（仅英文/仅中文）全串位。改成先按 '[' 定界再吃满到 ']'。
+                String[] pw = splitWordLine(body);
+                // v1.3.3：≤v1.3.2 推出去的记录里，没音标的词是「单词+释义」直接粘着的
+                // （approximatea.近似的）：整行既没有空格也没有 '['，切不开。按当前词库反查前缀，
+                // 老记录不用等下一次推送就能显示正常；查不到就原样显示。
+                if (body.indexOf('[') < 0) {
+                    if (glueDict == null) glueDict = Words.load(ctx);
+                    String[] fx = repairGlued(body, glueDict);
+                    if (fx != null) pw = fx;
                 }
-                cn = rest;
+                String en = pw[0], ph = pw[1], cn = pw[2];
                 String tag = isRev ? "<span class='tag rev'>复</span>" : "<span class='tag'>新</span>";
                 h.append("<div class='w'>").append(tag).append("<span><span class='en'>")
                  .append(esc(en)).append("</span> <span class='ph'>")
@@ -184,6 +189,66 @@ public class HtmlView {
         } catch (Throwable e) {
             return null;
         }
+    }
+
+    /**
+     * 把历史里存的一行「单词[音标] 释义」拆成 {单词, 音标, 释义}。
+     *
+     * 关键是**不能按空白切单词**：音标允许带空格，例如
+     * `pretend[prɪ'tend, priː-]`（英/美两个读音）这类「逗号 + 空格」的音标
+     * 内置词库里就有 552 条。老实现切在第一个空格上，结果单词变成
+     * `pretend[prɪ'tend,`、释义变成 `priː-] v.假装…`，
+     * 加粗范围和「仅英文/仅中文」的隐藏都跟着串位。
+     *
+     * 现在的规则：单词取到 '[' 为止；音标从 '[' 吃满到 ']'（中间的空白原样保留）；
+     * 剩下的才算释义。没有 '[' 时退回按空白切（兼容只存「单词 释义」的老数据），
+     * 也兼容「单词 [音标] 释义」这种中间带空格的写法。
+     */
+    static String[] splitWordLine(String body) {
+        int n = body.length();
+        int i = 0;
+        while (i < n && Character.isWhitespace(body.charAt(i))) i++;
+        int j = i;
+        while (j < n && !Character.isWhitespace(body.charAt(j))) j++;
+        String first = body.substring(i, j);
+        String en, rest;
+        int br = first.indexOf('[');
+        if (br >= 0) {
+            en = first.substring(0, br);
+            rest = body.substring(i + br);          // 从 '[' 开始，含音标内部的空格
+        } else {
+            en = first;
+            rest = (j < n ? body.substring(j) : "").trim();
+        }
+        String ph = "";
+        if (rest.startsWith("[")) {
+            int e = rest.indexOf(']');
+            if (e > 0) { ph = rest.substring(1, e).trim(); rest = rest.substring(e + 1).trim(); }
+        }
+        return new String[]{en, ph, rest.trim()};
+    }
+
+    /**
+     * 还原 ≤v1.3.2 推送的「单词释义」粘连行（approximatea.近似的）。
+     *
+     * 老 fmt() 对没有音标的词是 word + mean 直接拼，行里既没有空格也没有 '['，
+     * splitWordLine 只能整串当单词。这里拿当前词库按词头前缀反查：
+     * 命中就返回 {词头, 音标, 释义}，没命中返回 null（调用方原样显示）。
+     * 只在这一批数据里真的出现无 '[' 行时才扫词表，不影响正常渲染开销。
+     */
+    static String[] repairGlued(String body, java.util.List<Words.W> dict) {
+        if (dict == null || body == null) return null;
+        String s = body.trim();
+        if (s.length() == 0) return null;
+        for (Words.W w : dict) {
+            String wd = w.word;
+            if (wd == null || wd.length() == 0 || s.length() <= wd.length()) continue;
+            if (!s.startsWith(wd)) continue;
+            String tail = s.substring(wd.length()).trim();
+            if (tail.length() == 0) continue;
+            if (tail.equals(w.mean)) return new String[]{wd, w.ph, w.mean};
+        }
+        return null;
     }
 
     /** 首次设置页：初试日期 + 词库管理。 */
